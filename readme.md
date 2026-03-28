@@ -39,9 +39,9 @@
 - Função: inicializa a árvore lendo o arquivo binário ou csv
 
 ## Create
-- (juntar um página inteira de registros e depois escrever -> fazer vetor de structs)
 - Função: ler linha e escrever nos campos corretos
--  
+- Repetir a função de cima até EOF
+- Ignorar a primeira linha 
 
 ## Select
 - 
