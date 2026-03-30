@@ -16,4 +16,3 @@ run:
 clean:
 	rm *.o
 	rm exe
-	rm *.bin
