@@ -1,22 +1,201 @@
 #ifndef DATA_H
     #define DATA_H
 
-    #include "../TAD_AVL/avl.h"
+    #include <stdbool.h>
+    #include <stdio.h> 
+    #include <stdlib.h>
+    #include <string.h>
 
-    typedef struct data_ DATA;
+    typedef unsigned int uint;
+    typedef unsigned long long ull;
+    typedef char int8;
 
-    
-    #define REMOVIDO 0
-    #define PROX 1
+    /* Para todas as funções consideramos que o registro de cabeçalho do arquivo binário siga exatamente as especifiações do Trabalho,
+    isto é, possua os mesmos campos na mesma ordem, e que seja o primeiro registro do arquivo. */
+    /* Além disso, todas as funções de leitura ou escrita em um arquivo conservará o valor do cursor do arquivo no fim de sua execução. */
+    /* Por fim, é importante ressaltar que estamos trabalhando somente com arquviso binários - sem padding entre os valores. */
+
+    /*=============DEFINIÇÕES============*/
+
+    #define REMOVIDO 0 
+    #define PROX 1 
     #define COD_EST 2
     #define COD_LIN 3
     #define COD_PROX 4
     #define DIST 5
     #define COD_LIN_INT 6
     #define COD_EST_INT 7
-    #define NOME_EST 9
-    #define NOME_LIN 11
+    #define NOME_EST 8
+    #define NOME_LIN 9
+
+    typedef struct data_ DATA;
+
+    /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
+
+    /* Aloca memória para a estrutura que representa um registro de dados.
+    - Retorna o ponteiro para o espaço alocado, ou NULL, no caso de falha.
+    
+    Os campos são inicializados como se fossem nulos e o registro é considerado não removido, inicialmente. */
+    DATA *data_create();
+
+    /* Desaloca o espaço da estrutura que representa um registro de dados.
+    - Recebe um ponteiro de ponteiro para esse tipo de estrutura.
+    - Retorna true, se a desalocações ocorreu corretamente; false, caso contrário.
+
+    Seta NULL pata o ponteiro da estrutura. */
+    bool data_delete(DATA **d);
+
+    /*================LEITURA===============*/
+
+    /* Carrega todos os campos de um registro de dados de um arquivo para a estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem e um ponteiro para o arquivo em que está o registro.
+    - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
+
+    O arquivo deve estar aberto em modo que permite leitura. */
+    bool data_load_all(DATA *d, uint RRN, FILE *f);
+
+    /* Carrega um único campo de um registro de dados de um arquivo para a estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem, um seletor do campo e um ponteiro para o arquivo em que está o registro.
+    - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
+
+    O arquivo deve estar aberto em modo que permite leitura. */
+    bool data_load_field(DATA *d, uint RRN, int8 op, FILE *f);
+
+    /*================GRAVAÇÃO===============*/
+
+    /* Salva todos os campos da estrutura em um registro de dados de um arquivo.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino e um ponteiro para o arquivo. 
+    - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
+
+    O arquivo deve estar aberto em modo que permite gravação. */
+    bool data_save_all(DATA *d, uint RRN, FILE *f);
+
+    /* Salva um único campo da estrutura em um registro de dados de um arquivo.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino, um seletor do campo e um ponteiro para o arquivo em que está o registro. 
+    - Retorna true, se a escrita ocorreu corretamente; false, caso contrário.
+    
+    O arquivo deve estar aberto em modo que permite gravação. */
+    bool data_save_field(DATA *d, uint RRN, int8 op, FILE *f);
 
 
+    /*===============GETTERS===============*/
 
+    /* Recupera o valor do campo removido da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão'1', em caso de falha. */
+    char data_get_removido(DATA *d);
+    
+    /* Recupera o valor do campo próximo da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha. */
+    int data_get_prox(DATA *d);
+    
+    /* Recupera o valor do campo código da estação da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha. */
+    int data_get_cod_est(DATA *d);
+    
+    /* Recupera o valor do campo código da linha da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha. */
+    int data_get_cod_lin(DATA *d);
+    
+    /* Recupera o valor do campo código da próxima estação da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha. */
+    int data_get_cod_prox(DATA *d);
+    
+    /* Recupera o valor do campo distância da próxima estação da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha. */
+    int data_get_dist(DATA *d);
+
+    /* Recupera o valor do campo código da linha de integração da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha.*/
+    int data_get_cod_lin_int(DATA *d);
+
+    /* Recupera o valor do campo código da estação de integração da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão -1, em caso de falha. */
+    int data_get_cod_est_int(DATA *d);
+    
+    /* Recupera o valor do campo tamanho do nome da estação da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão 0, em caso de falha. */
+    uint data_get_tam_nome_est(DATA *d);
+    
+    /* Recupera o valor do campo nome da estação da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão NULL, em caso de falha. 
+
+    A string retornada possui o terminador '\0' e não ocupa o mesmo espaço na memória que a string que a estrutura armazena. */
+    char* data_get_nome_est(DATA *d);
+    
+    /* Recupera o valor do campo tamanho do nome da linha da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão 0, em caso de falha. */
+    uint data_get_tam_nome_lin(DATA *d);
+    
+    /* Recupera o valor do campo nome da linha da estrutura.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados.
+    - Retorna o valor do campo; retorna-se por padrão NULL, em caso de falha. 
+
+    A string retornada possui o terminador '\0' e não ocupa o mesmo espaço na memória que a string que a estrutura armazena, respeitando o conceito de TAD. */
+    char* data_get_nome_lin(DATA *d);
+
+    /*===============SETTERS===============*/
+    
+    /* Atribui para o campo removido da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_removido(DATA *d, char removido);
+
+    /* Atribui para o campo próximo da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_prox(DATA *d, int prox);
+    
+    /* Atribui para o campo código da estação da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_cod_est(DATA *d, int cod_estacao);
+    
+    /* Atribui para o campo código da linha da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_cod_lin(DATA *d, int cod_linha);
+
+    /* Atribui para o campo código da próxima estação da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */    bool data_set_cod_prox(DATA *d, int cod_prox_estacao);
+
+    /* Atribui para o campo distância da próxima estação da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_dist(DATA *d, int dist_prox_estacao);
+    
+    /* Atribui para o campo código da linha de integração da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_cod_lin_int(DATA *d, int cod_linha_integra);
+
+    /* Atribui para o campo código da estação de integração da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */
+    bool data_set_cod_est_int(DATA *d, int cod_est_integra);
+
+    /* Atribui para o campo nome da estação da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). 
+
+    A string passada de deve ter o terminador '\0'. */
+    bool data_set_nome_est(DATA *d, char *nome_estacao);
+    
+    /* Atribui para o campo nome da linha da estrutura um valor especificado.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). 
+
+    A string passada de deve ter o terminador '\0'. */
+    bool data_set_nome_lin(DATA *d, char *nome_linha);
 #endif

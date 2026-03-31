@@ -6,6 +6,7 @@
 
 struct data_{
     char removido;
+    // -> padding de 3 bytes
     int prox;
     int cod_estacao;
     int cod_linha;
@@ -14,10 +15,12 @@ struct data_{
     int cod_linha_integra;
     int cod_est_integra;
     uint tam_nome_estacao;
+    // -> padding de 4 bytes
     char* nome_estacao;
     uint tam_nome_linha;
+    // -> padding de 4 bytes
     char* nome_linha;
-};
+}; // Tamanho em bytes na memória primária é de 64 bytes
 
 
 /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
@@ -25,11 +28,11 @@ struct data_{
 DATA *data_create(){
     DATA *d = (DATA*)malloc(sizeof(DATA));
 
-    if(d != NULL){
-        d->removido = '0';
+    if(d != NULL){ // Inicialmente, consideramos que não está removido, mas todos campos são nulos
+        d->removido = '0'; 
         d->prox = -1;
         d->cod_estacao = d->cod_linha = d->cod_prox_estacao = d->dist_prox_estacao = d->cod_linha_integra = d->cod_est_integra = -1;
-        d->tam_nome_linha = d->tam_nome_linha = 0;
+        d->tam_nome_estacao = d->tam_nome_linha = 0;
         d->nome_estacao = NULL;
         d->nome_linha = NULL;
     }
@@ -41,8 +44,8 @@ DATA *data_create(){
 bool data_delete(DATA **d){
     if(d == NULL || *d == NULL) return false;
 
-    if((*d)->nome_estacao != NULL) free((*d)->nome_estacao), (*d)->nome_estacao = NULL;
-    if((*d)->nome_linha != NULL) free((*d)->nome_linha), (*d)->nome_linha = NULL;
+    if((*d)->nome_estacao != NULL) free((*d)->nome_estacao), (*d)->nome_estacao = NULL; // Desalocando nome da estação
+    if((*d)->nome_linha != NULL) free((*d)->nome_linha), (*d)->nome_linha = NULL; // Desalocando nome da linha 
 
     free(*d);
     *d = NULL;
@@ -59,8 +62,11 @@ bool data_load_all(DATA *d, uint RRN, FILE *f){
     ull origem = ftell(f);
     ull off = RRN * 80 + SEEK_INI; // Calculando o byte offset do registro de dado a ser carregado
     fseek(f, off, SEEK_SET);
-     
-    fread(d, TAM_FIXO, 1, f); // Lendo primeira parte do registro (inclusive o tamanho do nome da estação)
+    
+    // Lendo somente o removido (1 byte)
+    fread(&(d->removido), sizeof(d->removido), 1, f);
+    // Lendo até o primeiro campo de tamnanho variável (ler separado faz pular o padding da estrutura)
+    fread(&(d->prox), TAM_FIXO - sizeof(d->removido), 1, f); 
     if(d->tam_nome_estacao > 0){
         if(d->nome_estacao != NULL) free(d->nome_estacao); // Se necessário, o nome anterior que estava na struct será sobrescrito
         
@@ -143,10 +149,14 @@ bool data_load_field(DATA *d, uint RRN, int8 op, FILE *f){
             }
 
             break;
-
+            
         case NOME_LIN:
+            uint aux_U; // Guardará o tamanho do nome da estação (se necessário) para saltá-lo na leitura
+            // Lendo tamanho do nome da estação (precisamos dessa informação para ir para a byte correto e ler o nome da linha)
+            fseek(f, TAM_FIXO-sizeof(d->tam_nome_estacao), SEEK_CUR);
+            fread(&aux_U, sizeof(d->tam_nome_estacao), 1, f);
             // Lendo tamanho string
-            fseek(f, TAM_FIXO+sizeof(d->nome_estacao), SEEK_CUR); // Movendo o ponteiro para o campo tam_nome_linha
+            fseek(f, aux_U, SEEK_CUR); // Movendo o ponteiro para o campo tam_nome_linha (pulando o nome da estação - aux_U bytes)
             fread(&(d->tam_nome_linha), sizeof(d->tam_nome_linha), 1, f);
             // Alocando memória
             if(d->tam_nome_linha > 0){
@@ -158,6 +168,9 @@ bool data_load_field(DATA *d, uint RRN, int8 op, FILE *f){
             }
 
             break;
+
+        default:
+            return false;
     }
     
     fseek(f, origem, SEEK_SET);
@@ -172,7 +185,16 @@ void data_fill_trash(uint RRN, FILE *f){
 
     ull resto = (off_fim_registro - ftell(f))+1; // Quantidade de bytes a ser preenchida com lixo
 
-    fwrite(LIXO, sizeof(char), resto, f);
+    char *preenche = (char*)malloc(sizeof(char)*resto);
+    if(preenche != NULL){
+        for(int i = 0; i < resto; i++){
+            preenche[i] = LIXO;
+        }
+        
+        fwrite(preenche, sizeof(char), resto, f);
+        free(preenche);
+        preenche = NULL;
+    }
 }
 
 bool data_save_all(DATA *d, uint RRN, FILE *f){
@@ -182,11 +204,13 @@ bool data_save_all(DATA *d, uint RRN, FILE *f){
     ull off = RRN * 80 + SEEK_INI;
     fseek(f, off, SEEK_SET);
 
-    // Salvando até antes do primeiro campo de tamanho variável
-    fwrite(d, TAM_FIXO, 1, f);
-    // Salvando nome da estação
+    // Escrevendo o campo removido separado (evitar padding)
+    fwrite(&(d->removido), sizeof(d->removido), 1, f);
+    // Escrevendo até antes do primeiro campo de tamanho variável
+    fwrite(&(d->prox), TAM_FIXO - sizeof(d->removido), 1, f);
+    // Escrevendo nome da estação, se houver
     if(d->nome_estacao != NULL) fwrite(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f);
-    // Salvando tamanho do nome da linha
+    // Escrevendo tamanho do nome da linha, se houver
     fwrite(&(d->tam_nome_linha), sizeof(d->tam_nome_linha), 1, f);
     // Salvando nome da linha
     if(d->nome_linha != NULL) fwrite(d->nome_linha, sizeof(char), d->tam_nome_linha, f);
@@ -247,14 +271,14 @@ bool data_save_field(DATA *d, uint RRN, int8 op, FILE *f){
             break;
 
         case NOME_EST:
-            fseek(f, TAM_FIXO-sizeof(d->tam_nome_estacao), SEEK_CUR);
-            // Salvando tamanho do nome 
-            fwrite(&(d->tam_nome_estacao), sizeof(d->tam_nome_estacao), 1, f);
-
             // Se o nome da estação for maior ou menor do que o que está armazenado, precisamos arrumar a posição dos campos posteriores
             DATA *aux = data_create(); // Para não perder nenhum dado armazenado na struct d
             data_load_field(aux, RRN, NOME_LIN, f); // Lendo o campo posterior do mesmo registro (nome da linha e tamanho do nome da linha)
-                
+            
+            // Movendo cursor para tamanho do nome da estação (essa modificação tem que ser feita depois do data_load_field)
+            fseek(f, TAM_FIXO-sizeof(d->tam_nome_estacao), SEEK_CUR);
+            // Escrevendo novo tamanho do nome da estação
+            fwrite(&(d->tam_nome_estacao), sizeof(d->tam_nome_estacao), 1, f);
             // Escrevendo o nome da estação
             fwrite(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f);
 
@@ -270,7 +294,12 @@ bool data_save_field(DATA *d, uint RRN, int8 op, FILE *f){
             break;
 
         case NOME_LIN:
-            fseek(f, TAM_FIXO+sizeof(d->nome_estacao), SEEK_CUR);
+            uint aux_U;
+            // Lendo o tamanho do nome da estação
+            fseek(f, TAM_FIXO-sizeof(d->tam_nome_estacao), SEEK_CUR);
+            fread(&aux_U, sizeof(d->tam_nome_estacao), 1, f);
+            // Movendo cursor para escrever tamanho do nome da linha
+            fseek(f, aux_U, SEEK_CUR);
             // Salvando tamanho do nome da linha
             fwrite(&(d->tam_nome_linha), sizeof(d->tam_nome_linha), 1, f);
             // Salvando nome da linha
@@ -280,6 +309,9 @@ bool data_save_field(DATA *d, uint RRN, int8 op, FILE *f){
             // Não é necessário "consertar" os campos posteriores, pois não há campos posteriores
 
             break;
+
+        default:
+            return false;
     }
 
     fseek(f, origem, SEEK_SET);
@@ -347,7 +379,10 @@ char* data_get_nome_est(DATA *d){
     // É impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
     if(d != NULL && d->tam_nome_estacao > 0){ 
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1));
-        strcpy(aux, d->nome_estacao);
+        
+        for(int i = 0; i < d->tam_nome_estacao; i++){
+           aux[i] = d->nome_estacao[i];
+        }
 
         aux[d->tam_nome_estacao] = '\0'; // Como não necessariamente o usuário vai ter o tamanho junto da string, é melhor colocarmos o terminador \0 nela
 
@@ -363,11 +398,14 @@ uint data_get_tam_nome_lin(DATA *d){
     return 0;
 }
 
-char* data_get_nome_est(DATA *d){
+char* data_get_nome_lin(DATA *d){
     // É impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
     if(d != NULL && d->tam_nome_linha > 0){ 
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1));
-        strcpy(aux, d->nome_linha);
+        
+        for(int i = 0; i < d->tam_nome_linha; i++){
+           aux[i] = d->nome_linha[i];
+        }
 
         aux[d->tam_nome_linha] = '\0'; // Como não necessariamente o usuário vai ter o tamanho junto da string, é melhor colocarmos o terminador \0 nela
 
@@ -453,31 +491,44 @@ bool data_set_cod_est_int(DATA *d, int cod_est_integra){
 
 // Não faz sentido haver um set separado para tamanho dos nomes, pois isso daria liberdade para o usuário modificar o tamanho para um valor errado, o que prejudicaria todo sistema
 
-/*bool data_set_nome_est(DATA *d, char *nome_estacao){
+bool data_set_nome_est(DATA *d, char *nome_estacao){
     if(d != NULL && nome_estacao != NULL){
-        if(d->nome_estacao != NULL) free(d->nome_estacao);
+        if(d->nome_estacao != NULL){
+            free(d->nome_estacao);
+            d->nome_estacao = NULL;
+        }
         // Consideramos que a string passada possui o terminador \0
         d->tam_nome_estacao = strlen(nome_estacao);
         if(d->tam_nome_estacao > 0) d->nome_estacao = (char*)malloc(sizeof(char)*d->tam_nome_estacao); 
 
         //A string na struct não terá o terminador
         for(int i = 0; i < d->tam_nome_estacao; i++){
-            d->
+            d->nome_estacao[i] = nome_estacao[i];
+        }
+        
+        return true;
+    }
+
+    return false;
+}
+
+bool data_set_nome_lin(DATA *d, char *nome_linha){
+    if(d != NULL && nome_linha != NULL){
+        if(d->nome_linha != NULL){
+            free(d->nome_linha);
+            d->nome_linha = NULL;
+        }
+        // Consideramos que a string passada possui o terminador \0
+        d->tam_nome_linha = strlen(nome_linha);
+        if(d->tam_nome_linha > 0) d->nome_linha = (char*)malloc(sizeof(char)*d->tam_nome_linha); 
+
+        //A string na struct não terá o terminador
+        for(int i = 0; i < d->tam_nome_linha; i++){
+            d->nome_linha[i] = nome_linha[i];
         }
 
-    }
-}*/
-
-char* data_set_nome_est(DATA *d){
-    // É impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
-    if(d != NULL && d->tam_nome_linha > 0){ 
-        char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1));
-        strcpy(aux, d->nome_linha);
-
-        aux[d->tam_nome_linha] = '\0'; // Como não necessariamente o usuário vai ter o tamanho junto da string, é melhor colocarmos o terminador \0 nela
-
-        return aux; // Não podemos retornar diretamente o nome da estação que está na struct, ou quebramos a ideia do TAD
+        return true;
     }
 
-    return NULL;
+    return false;
 }

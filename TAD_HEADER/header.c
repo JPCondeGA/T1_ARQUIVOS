@@ -2,11 +2,12 @@
 
 struct header_{
     char status; // Consistência do arquivo
+    // -> padding de 3 bytes
     int topo; // Byte offset do topo da pilha dos registros logicamente removidos (-1 no caso de pilha vazia)
     int proxRRN; // Próximo RRN disponível para inserção de algum registro
     int nmr_estacoes; // Número de estações diferentes no arquivo (diferencia-se pelo nome)
     int nmr_pares; // Número de pares (cod_estação, cod_prox_estação) diferentes no arquivo -- Não direcionado?????
-};
+}; //Tamanho na memória primária é de 20 bytes
 
 /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
@@ -42,8 +43,6 @@ bool header_load_all(HEADER *h, FILE *f){
     fread(&(h->status), sizeof(h->status), 1, f);
     fread(&(h->topo), sizeof(HEADER) - 4, 1, f);
 
-    //fread(h, sizeof(HEADER), 1, f);
-
     fseek(f, origem, SEEK_SET); // Voltando para posição original
 
     return true;
@@ -72,6 +71,7 @@ bool header_load_field(HEADER *h, int8 op, FILE *f){
         else if(op == PARES){
             fread(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f);
         } 
+        else return false;
     }
 
     fseek(f, origem, SEEK_SET);
@@ -87,8 +87,6 @@ bool header_save_all(HEADER *h, FILE *f){
     
     fwrite(h, sizeof(h->status), 1, f); // Escrevendo o status
     fwrite(&(h->topo), sizeof(HEADER) - 4, 1, f); // Excrevendo o resto (para evitar o padding)
-
-    //fwrite(h, sizeof(HEADER), 1, f);
 
     fseek(f, origem, SEEK_SET); // Voltando o ponteiro para onde estavamos
 
@@ -118,6 +116,7 @@ bool header_save_field(HEADER *h, int8 op, FILE *f){
         else if(op == PARES){
             fwrite(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f);
         } 
+        else return false;
     }
 
     fseek(f, origem, SEEK_SET);

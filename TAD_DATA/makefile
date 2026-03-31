@@ -13,6 +13,10 @@ data.o:
 run:
 	./exe
 
+reset:
+	rm arq.bin
+	touch arq.bin
+
 clean:
 	rm *.o
 	rm exe
