@@ -32,18 +32,21 @@ bool header_delete(HEADER **h){
     return true;
 }
 
-/*===========CARREGAMENTO E SALVAMENTO==========*/
+/*================LEITURA===============*/
 
 bool header_load_all(HEADER *h, FILE *f){
     if(h == NULL || f == NULL) return false;
 
-    ull origem = ftell(f); // Guardando posição original do cursor
-    fseek(f, 0, SEEK_SET); // Movendo para o arquivo de cabeçalho
+    // Guardando posição original do cursor
+    ull origem = ftell(f); 
+    // Movendo para o arquivo de cabeçalho
+    fseek(f, 0, SEEK_SET); 
     
     fread(&(h->status), sizeof(h->status), 1, f);
     fread(&(h->topo), sizeof(HEADER) - 4, 1, f);
 
-    fseek(f, origem, SEEK_SET); // Voltando para posição original
+    // Voltando para posição original
+    fseek(f, origem, SEEK_SET); 
 
     return true;
 }
@@ -53,11 +56,13 @@ bool header_load_field(HEADER *h, int8 op, FILE *f){
     
     ull origem = ftell(f);
 
-    if(op == STATUS){ // Status é o primeiro campo do arquivo
+    if(op == STATUS){ 
+        // Status é o primeiro campo do arquivo
         fseek(f, 0, SEEK_SET);
         fread(&(h->status), sizeof(h->status), 1, f);
     }
-    else{ // Status ocupa 1 byte e cada um dos restantes 4 byter
+    else{ 
+        // Status ocupa 1 byte e cada um dos restantes 4 byter
         fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto
         if(op == TOP){
             fread(&(h->topo), sizeof(h->topo), 1, f);
@@ -79,16 +84,24 @@ bool header_load_field(HEADER *h, int8 op, FILE *f){
     return true;
 }
 
+
+/*================GRAVAÇÃO===============*/
+
 bool header_save_all(HEADER *h, FILE *f){
     if(h == NULL || f == NULL) return false;
 
-    ull origem = ftell(f); // Guardando o ponteiro de onde estamos
-    fseek(f, 0, SEEK_SET); // Indo para início do arquivo
+    // Guardando o ponteiro de onde estamos
+    ull origem = ftell(f); 
+    // Indo para início do arquivo
+    fseek(f, 0, SEEK_SET); 
     
-    fwrite(h, sizeof(h->status), 1, f); // Escrevendo o status
-    fwrite(&(h->topo), sizeof(HEADER) - 4, 1, f); // Excrevendo o resto (para evitar o padding)
+    // Escrevendo o status
+    fwrite(h, sizeof(h->status), 1, f); 
+    // Excrevendo o resto (para evitar o padding)
+    fwrite(&(h->topo), sizeof(HEADER) - 4, 1, f); 
 
-    fseek(f, origem, SEEK_SET); // Voltando o ponteiro para onde estavamos
+    // Voltando o ponteiro para onde estavamos
+    fseek(f, origem, SEEK_SET); 
 
     return true;
 }
@@ -124,7 +137,7 @@ bool header_save_field(HEADER *h, int8 op, FILE *f){
     return true;
 }
 
-/*===========GETTERS E SETTERS==========*/
+/*===============GETTERS===============*/
 
 char header_get_status(HEADER *h){
     if(h != NULL) return h->status;
@@ -155,6 +168,8 @@ int header_get_nmr_pares(HEADER *h){
 
     return -1;
 }
+
+/*===============SETTERS===============*/
 
 bool header_set_status(HEADER *h, char status){
     if(h != NULL && (status == '0' || status == '1')){
