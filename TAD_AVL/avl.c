@@ -123,8 +123,10 @@ NO* avl_criar_no(char* nome, PAR par, bool op){
     strcpy(no->nome, nome);
   }
   else{
-    no->par = par;
+    no->nome = NULL;
   }
+
+  no->par = par;
 
   no->dir = NULL;
   no->esq = NULL;
@@ -430,29 +432,38 @@ NO *avl_balanceia(NO* no){
 }
 
 int8 avl_compara_no(NO* no, char* nome, PAR par, bool op){
-  // op = false -> AVL de nomes
+  if(no == NULL) return 0; // Para não tentar acessar o filho direito ou esquerdo
+  
+  // Retorn do strcmp
   int resp;
+  
+  // op = false -> AVL de nomes
   if(!op && nome != NULL && no->nome != NULL){
+    
     resp = strcmp(no->nome, nome);
-    if(resp < 0) return -1;
-    else if(resp > 0) return 1;
+    
+    // Conferindo retorno do strcmp 
+    // no->nome é menor do que nome lexicograficamente
+    if(resp < 0) return 1;
+    // no->nome é maior do que nome lexicograficamente
+    if(resp > 0) return -1;
+    // Ambos são iguais
     else return 0;
   }
-  else{
+  else if(op){
     // Maior é mais relevante
-    if(no->par.maior > par.maior){
-      return -1;
-    }
-    else if(no->par.maior < par.maior){
-      return 1;
-    }
-    else{
-      // Caso o maior seja igual, olhamos para o menor
-      if(no->par.menor > par.menor) return -1;
-      if(no->par.menor < par.menor) return 1;
-      else return 0;
-    }
+    if(no->par.maior > par.maior) return -1;
+    if(no->par.maior < par.maior) return 1;
+    
+    // Caso o maior seja igual, olhamos para o menor
+    if(no->par.menor > par.menor) return -1;
+    if(no->par.menor < par.menor) return 1;
+
+    // Caso os dois forem iguais
+    else return 0;
   }
+
+  return 0;
 }
 
 PAR avl_criar_par(int a, int b){
@@ -460,6 +471,7 @@ PAR avl_criar_par(int a, int b){
   // Os valores dentro do par seguem uma ordem para não se diferenciar o par (a,b) do (b,c) e para a busca na árvore
   if(a < b) par.menor = a, par.maior = b;
   else par.maior = a, par.menor = b;
+
   return par;
 }
 

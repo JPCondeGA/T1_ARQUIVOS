@@ -14,7 +14,10 @@
     /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
     /* Realiza alocação dinâmica para a estrutura que servirá de árvore AVL
-    - Retorna o ponteiro para o espaço alocado, ou NULL no caso de falha. */
+    - Recebe um booleando op que indica o tipo da árvore: ordenado pelos pares ou ordenada pelos nomes. No primeiro caso, op deve ser igual a true; no segundo, false.
+    - Retorna o ponteiro para o espaço alocado, ou NULL no caso de falha.
+    
+    O tipo da árvore determinará como serão feitas as buscas também. Portanto, não é possível remover nó pelo nome em uma árvore ordenada por pares. */
     ARVORE* avl_criar_arvore(bool op); 
 
     /* Desaloca toda a informação salva na árvore em pós-ordem, depois desaloca a árvore em si.

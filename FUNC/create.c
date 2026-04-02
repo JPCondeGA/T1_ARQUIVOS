@@ -65,6 +65,7 @@ void func_create_interface(){
         erro = func_create(fe, fs, h); 
         // Mudando o status do arquivo para consistente
         header_set_status(h, '1');
+        
         // Salvando o registro de cabeçalho correspondente arquivo binário 
         header_save_all(h, fs);
     }
@@ -112,22 +113,26 @@ bool func_create(FILE *fe, FILE *fs, HEADER *h){
             for(int i = 0; !erro && i < NMR_CAMPOS; i++){
                 // Preenchendo a estrutura que representa um registro de dados em ordem dos campos
                 erro = func_attribute_value(valores[i], campos[i], d);
-                // Colocando nome na árvore (mesmo se o nome for NULL, a funçao avl_inserir trata) - os outros dois parâmetros podem ser quaisquer inteiros
-                avl_inserir(ar_nomes, data_get_nome_est(d), 0, 0);
-                // Colocand par de inteiros na árvore - não importa a string que eu passo como parâmetro
-                avl_inserir(ar_pares, NULL, data_get_cod_est(d), data_get_cod_prox(d));
             }
 
-            // Salvando dados no próximo RRN (já verificamos que nenhum dos ponteiros é inválido)
-            erro = func_insert_end(d, h, fs);
+            // Colocando nome na árvore (mesmo se o nome for NULL, a funçao avl_inserir trata) - os outros dois parâmetros podem ser quaisquer inteiros
+            erro = erro || !avl_inserir(ar_nomes, data_get_nome_est(d), 0, 0);  // Nome nunca vai ser nulo
+            // Colocando par de inteiros na árvore - não importa a string que eu passo como parâmetro
+            if(data_get_cod_prox(d) != -1) // Código da estação nunca vai ser nulo
+                erro = erro || !avl_inserir(ar_pares, NULL, data_get_cod_est(d), data_get_cod_prox(d));
+
+            // Salvando dados no próximo RRN disponível (já verificamos que nenhum dos ponteiros é inválido)
+            erro = erro || func_insert_end(d, h, fs);
 
             func_desaloca_strs(valores);
         }
 
         func_desaloca_strs(campos);
 
+        // Atualizando cabeçalho
         header_set_nmr_estacoes(h, avl_get_n(ar_nomes));
         header_set_nmr_pares(h, avl_get_n(ar_pares));
+
     }
 
     if(d != NULL) data_delete(&d);
@@ -185,7 +190,7 @@ bool func_division_line(char linha[TAM_LINHA], char *dest[NMR_CAMPOS]){
 
 bool func_attribute_value(char *valor, char *campo, DATA *d){
     if(strcmp(campo, "CodEstacao") == 0){
-        if(valor[0] == '\0') data_set_cod_est(d, atoi(valor));
+        if(valor[0] != '\0') data_set_cod_est(d, atoi(valor));
         else data_set_cod_est(d, -1);
     }
 
@@ -194,7 +199,7 @@ bool func_attribute_value(char *valor, char *campo, DATA *d){
     }
         
     else if(strcmp(campo, "CodLinha") == 0){
-        if(valor[0] == '\0') data_set_cod_lin(d, atoi(valor));
+        if(valor[0] != '\0') data_set_cod_lin(d, atoi(valor));
         else data_set_cod_lin(d, -1);
     }
 
@@ -203,22 +208,22 @@ bool func_attribute_value(char *valor, char *campo, DATA *d){
     }
 
     else if(strcmp(campo, "CodProxEst") == 0){
-        if(valor[0] == '\0') data_set_cod_prox(d, atoi(valor));
+        if(valor[0] != '\0') data_set_cod_prox(d, atoi(valor));
         else data_set_cod_prox(d, -1);
     }
 
     else if(strcmp(campo, "DistanciaProxEst") == 0){
-        if(valor[0] == '\0') data_set_dist(d, atoi(valor));
+        if(valor[0] != '\0') data_set_dist(d, atoi(valor));
         else data_set_dist(d, -1);
     }
 
     else if(strcmp(campo, "CodLinhaInteg") == 0){
-        if(valor[0] == '\0') data_set_cod_lin_int(d, atoi(valor));
+        if(valor[0] != '\0') data_set_cod_lin_int(d, atoi(valor));
         else data_set_cod_lin_int(d, -1);
     }
 
     else if(strcmp(campo, "CodEstacaoInteg") == 0){
-        if(valor[0] == '\0') data_set_cod_est_int(d, atoi(valor));
+        if(valor[0] != '\0') data_set_cod_est_int(d, atoi(valor));
         else data_set_cod_est_int(d, -1);
     }
     // O campo lido não corresponde a nenhum dos campos esperados
