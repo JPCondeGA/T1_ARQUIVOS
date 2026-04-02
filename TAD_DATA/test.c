@@ -2,15 +2,16 @@
 
 #include "data.h"
 
-#define RRN 0
 
 int main(){
-    int op;
+    int op, RRN;
     DATA *d = data_create();
     FILE *f = fopen("arq.bin", "rb+");
 
     printf(" [1] LER\n [2] ESCREVER\nSelecione: ");
     scanf("%d", &op);
+    printf("RRN: ");
+    scanf("%d", &RRN);
 
     if(op == 1){
         char *nome;
@@ -50,12 +51,12 @@ int main(){
         printf("COD EST INT: "); scanf("%d", &aux); data_set_cod_est_int(d, aux);
         printf("NOME EST: "); scanf(" %30[^\n]", nome); data_set_nome_est(d, nome);
         printf("NOME LIN: "); scanf(" %30[^\n]", nome); data_set_nome_lin(d, nome);
-        data_save_all(d, RRN, f);
+        //data_save_all(d, RRN, f);
         //data_save_field(d, RRN, REMOVIDO, f);
         //data_save_field(d, RRN, PROX, f);
         //data_save_field(d, RRN, DIST, f);
         //data_save_field(d, RRN, NOME_EST, f);
-        //data_save_field(d, RRN, NOME_LIN, f);
+        data_save_field(d, RRN, NOME_LIN, f);
     }
 
     data_delete(&d);

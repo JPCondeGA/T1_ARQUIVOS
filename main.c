@@ -1,3 +1,8 @@
+/*
+NOME: JOÃO PEDRO CONDE GOMES ALVES; N° USP: 16816271
+NOME: EDUARDO BENEDINI BUENO; N° USP: 16862551 
+*/
+
 #include "FUNC/func.h"
 
 int main(){

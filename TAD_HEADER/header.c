@@ -37,16 +37,14 @@ bool header_delete(HEADER **h){
 bool header_load_all(HEADER *h, FILE *f){
     if(h == NULL || f == NULL) return false;
 
-    // Guardando posição original do cursor
-    ull origem = ftell(f); 
     // Movendo para o arquivo de cabeçalho
     fseek(f, 0, SEEK_SET); 
     
-    fread(&(h->status), sizeof(h->status), 1, f);
-    fread(&(h->topo), sizeof(HEADER) - 4, 1, f);
-
-    // Voltando para posição original
-    fseek(f, origem, SEEK_SET); 
+    fread(&(h->status), sizeof(h->status), 1, f); 
+    fread(&(h->topo), sizeof(h->topo), 1, f); 
+    fread(&(h->proxRRN), sizeof(h->proxRRN), 1, f); 
+    fread(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f); 
+    fread(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f);
 
     return true;
 }
@@ -54,8 +52,6 @@ bool header_load_all(HEADER *h, FILE *f){
 bool header_load_field(HEADER *h, int8 op, FILE *f){
     if(h == NULL || f == NULL) return false;
     
-    ull origem = ftell(f);
-
     if(op == STATUS){ 
         // Status é o primeiro campo do arquivo
         fseek(f, 0, SEEK_SET);
@@ -79,8 +75,6 @@ bool header_load_field(HEADER *h, int8 op, FILE *f){
         else return false;
     }
 
-    fseek(f, origem, SEEK_SET);
-
     return true;
 }
 
@@ -90,26 +84,21 @@ bool header_load_field(HEADER *h, int8 op, FILE *f){
 bool header_save_all(HEADER *h, FILE *f){
     if(h == NULL || f == NULL) return false;
 
-    // Guardando o ponteiro de onde estamos
-    ull origem = ftell(f); 
     // Indo para início do arquivo
     fseek(f, 0, SEEK_SET); 
     
-    // Escrevendo o status
-    fwrite(h, sizeof(h->status), 1, f); 
-    // Excrevendo o resto (para evitar o padding)
-    fwrite(&(h->topo), sizeof(HEADER) - 4, 1, f); 
-
-    // Voltando o ponteiro para onde estavamos
-    fseek(f, origem, SEEK_SET); 
+    // Escrevendo campos (campo a campo como especificado)
+    fwrite(&(h->status), sizeof(h->status), 1, f); 
+    fwrite(&(h->topo), sizeof(h->topo), 1, f); 
+    fwrite(&(h->proxRRN), sizeof(h->proxRRN), 1, f); 
+    fwrite(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f); 
+    fwrite(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f); 
 
     return true;
 }
 
 bool header_save_field(HEADER *h, int8 op, FILE *f){
     if(h == NULL || f == NULL) return false;
-
-    ull origem = ftell(f);
 
     if(op == STATUS){
         fseek(f, 0, SEEK_SET);

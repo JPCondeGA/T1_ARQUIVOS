@@ -168,7 +168,8 @@
 
     /* Atribui para o campo código da próxima estação da estrutura um valor especificado.
     - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
-    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */    bool data_set_cod_prox(DATA *d, int cod_prox_estacao);
+    - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). */    
+    bool data_set_cod_prox(DATA *d, int cod_prox_estacao);
 
     /* Atribui para o campo distância da próxima estação da estrutura um valor especificado.
     - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
@@ -189,13 +190,13 @@
     - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
     - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). 
 
-    A string passada de deve ter o terminador '\0'. */
+    A string passada de deve ter o terminador '\0'. Em caso de string NULL, será entendido que esse campo terá valor nulo. */
     bool data_set_nome_est(DATA *d, char *nome_estacao);
     
     /* Atribui para o campo nome da linha da estrutura um valor especificado.
     - Recebe um ponteiro para a estrutura que representa um registro de dados e o valor que será atribuído ao campo.
     - Retorna true, se a atribuição ocorreu corretamente; false, em caso de falha (valor ou ponteiro inválido). 
 
-    A string passada de deve ter o terminador '\0'. */
+    A string passada de deve ter o terminador '\0'. Em caso de string NULL, será entendido que esse campo terá valor nulo. */
     bool data_set_nome_lin(DATA *d, char *nome_linha);
 #endif
