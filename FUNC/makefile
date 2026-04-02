@@ -1,5 +1,5 @@
-all: header.o data.o avl.o create.o test.o 
-	gcc data.o avl.o header.o test.o create.o -o exe
+all: header.o data.o avl.o fornecidas.o create.o test.o 
+	gcc data.o avl.o header.o fornecidas.o test.o create.o -o exe
 
 verifica: test.o func.o
 	gcc test.o func.o -fsanitize=address -o exe
@@ -9,6 +9,9 @@ test.o:
 
 create.o:
 	gcc -c create.c -o create.o
+
+fornecidas.o:
+	gcc -c fornecidas.c -o fornecidas.o
 
 avl.o:
 	gcc -c ../TAD_AVL/avl.c -o avl.o

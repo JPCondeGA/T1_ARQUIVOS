@@ -7,8 +7,8 @@
 
     #define NMR_CAMPOS 8
 
-    /*=============FORNECIDAS============*/
-    bool func_create_interface();
+    /*=============FUNCIONALIDADES============*/
+    void func_create_interface();
 
 
     /*=============FORNECIDAS============*/

@@ -489,13 +489,14 @@ bool data_set_cod_est_int(DATA *d, int cod_est_integra){
 
 bool data_set_nome_est(DATA *d, char *nome_estacao){
     if(d != NULL){
+        // Sobrescrevendo se necessário
         if(d->nome_estacao != NULL){
             free(d->nome_estacao);
             d->nome_estacao = NULL;
         }
         
         // Consideramos que a string passada possui o terminador \0
-        if(nome_estacao != NULL ) d->tam_nome_estacao = strlen(nome_estacao);
+        if(nome_estacao != NULL) d->tam_nome_estacao = strlen(nome_estacao);
         else d->tam_nome_estacao = 0;
 
         if(d->tam_nome_estacao > 0) d->nome_estacao = (char*)malloc(sizeof(char)*d->tam_nome_estacao); 

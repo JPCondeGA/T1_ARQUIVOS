@@ -1,7 +1,7 @@
 #include "header.h"
 
 struct header_{
-    char status; // Consistência do arquivo
+    char status; // Consistência do arquivo ('0' -> inconsistente; '1' -> consistente)
     // -> padding de 3 bytes
     int topo; // Byte offset do topo da pilha dos registros logicamente removidos (-1 no caso de pilha vazia)
     int proxRRN; // Próximo RRN disponível para inserção de algum registro
@@ -120,8 +120,6 @@ bool header_save_field(HEADER *h, int8 op, FILE *f){
         } 
         else return false;
     }
-
-    fseek(f, origem, SEEK_SET);
 
     return true;
 }

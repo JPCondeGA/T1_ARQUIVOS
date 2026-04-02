@@ -15,7 +15,7 @@
 
     /* Realiza alocação dinâmica para a estrutura que servirá de árvore AVL
     - Retorna o ponteiro para o espaço alocado, ou NULL no caso de falha. */
-    ARVORE* avl_criar_arvore(); 
+    ARVORE* avl_criar_arvore(bool op); 
 
     /* Desaloca toda a informação salva na árvore em pós-ordem, depois desaloca a árvore em si.
     - Recebe um ponteiro de ponteiro para a árvore a ser apagada como entrada.
@@ -28,7 +28,7 @@
     - Recebe um ponteiro para a árvore em que a chave será salva e o nome que será salvo.
     - Retorna "true" se a inserção ocorreu corretamente ou "false" caso contrário.
     (Note que a função retornará "false" caso um nó com o mesmo nome foi encontrado na árvore. Não houve inserção, apenas atualização de frequência.)*/
-    bool avl_inserir(ARVORE* ar, char* nome);
+    bool avl_inserir(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao);
 
     /*=============REMOÇÃO============*/
 
@@ -36,14 +36,19 @@
     - Recebe um ponteiro para a árvore em que a chave será removida e o nome que deve ser procurado.
     - Retorna "true" se um nó foi removido, e "false" caso contrário.
     (Note que a função retornará "false" se um nó foi encontrado, mas sua frequência era maior que 1. Não houve remoção, apenas atualização de frequência.)*/
-    bool avl_remover(ARVORE* ar, char* nome);
+    bool avl_remover(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao);
 
     /*=============GETTER============*/
 
-    /* Lê informação da estrutura da árvore.
+    /* Recupera informação da estrutura da árvore.
     - Recebe um ponteiro de árvore como entrada
-    - Retorna o número de chaves diferentes armazenadas nela.*/
+    - Retorna o número de chaves diferentes armazenadas nela. */
     uint avl_get_n(ARVORE *ar);
+
+    /*Recupera informação da estrutura da árvore.
+    - Recebe um ponteiro de árvore como entrada
+    - Retorna o tipo da árvore: true, se for uma árvore de pares de inteiro; false, caso contrário. */
+    bool avl_get_op(ARVORE *ar);
     
     /*=============TESTE============*/
 
