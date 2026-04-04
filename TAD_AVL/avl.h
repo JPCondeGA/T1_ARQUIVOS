@@ -27,10 +27,12 @@
 
     /*=============INSERÇÃO============*/
 
-    /* Insere um nome na árvore. Caso a mesma chave já tenha sido inserida previamente, sua frequência é incrementada ao invés de armazenar a mesma informação várias vezes.
-    - Recebe um ponteiro para a árvore em que a chave será salva e o nome que será salvo.
+    /* Insere um nome e um par de inteiros na árvore. Caso a mesma chave já tenha sido inserida previamente, sua frequência é incrementada ao invés de armazenar a mesma informação várias vezes.
+    - Recebe um ponteiro para a árvore em que a chave será salva, o nome que será salvo e os inteiros.
     - Retorna "true" se a inserção ocorreu corretamente ou "false" caso contrário.
-    (Note que a função retornará "false" caso um nó com o mesmo nome foi encontrado na árvore. Não houve inserção, apenas atualização de frequência.)*/
+    (Note que a função retornará "false" caso um nó com o mesmo nome foi encontrado na árvore. Não houve inserção, apenas atualização de frequência.)
+    
+    Importante ressaltar que a função copia o nome para outro espaço de memória, mantendo o conceito de TAD. */
     bool avl_inserir(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao);
 
     /*=============REMOÇÃO============*/

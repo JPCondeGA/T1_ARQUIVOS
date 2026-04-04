@@ -10,10 +10,13 @@ int main(){
 
     switch(op){
         case 1:
+            func_create_interface();
             break;
         case 2:
+            func_select_where_interface();
             break;
         case 3:
+            
             break;
         case 4:
             break;

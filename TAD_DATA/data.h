@@ -199,4 +199,11 @@
 
     A string passada de deve ter o terminador '\0'. Em caso de string NULL, será entendido que esse campo terá valor nulo. */
     bool data_set_nome_lin(DATA *d, char *nome_linha);
+
+
+    /**/
+    bool data_compare(DATA *d1, DATA *d2, int8 op);
+    
+    /**/
+    void data_print(DATA *d);
 #endif

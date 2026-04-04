@@ -73,20 +73,23 @@ bool data_load_all(DATA *d, uint RRN, FILE *f){
     fread(&(d->removido), sizeof(d->removido), 1, f);
     // Lendo até o primeiro campo de tamnanho variável (ler separado faz pular o padding da estrutura)
     fread(&(d->prox), TAM_FIXO - sizeof(d->removido), 1, f); 
-    if(d->tam_nome_estacao > 0){
-        if(d->nome_estacao != NULL) free(d->nome_estacao); // Se necessário, o nome anterior que estava na struct será sobrescrito
+    
+    if(d->nome_estacao != NULL) free(d->nome_estacao); // Se necessário, o nome anterior que estava na struct será sobrescrito
         
-        d->nome_estacao = (char*)malloc(sizeof(char)*d->tam_nome_estacao);
-        fread(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f); // Gravando nome da estação no espaço alocada
-    }
+    d->nome_estacao = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1));
+    if(d->tam_nome_estacao > 0) fread(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f); // Gravando nome da estação no espaço alocada
 
-    fread(&(d->tam_nome_linha), 4, 1, f); // Lendo o tamanho do nome da linha
-    if(d->tam_nome_linha > 0){
-        if(d->nome_linha != NULL) free(d->nome_linha); // O nome anterior pode ser sobrescrito
+    // Concatenando com o terminador
+    d->nome_estacao[d->tam_nome_estacao] = '\0';
 
-        d->nome_linha = (char*)malloc(sizeof(char)*d->tam_nome_linha);
-        fread(d->nome_linha, sizeof(char), d->tam_nome_linha, f); // Gravando nome da linha no espaço alocada
-    }
+    fread(&(d->tam_nome_linha), sizeof(d->tam_nome_linha), 1, f); // Lendo o tamanho do nome da linha
+    if(d->nome_linha != NULL) free(d->nome_linha); // O nome anterior pode ser sobrescrito
+
+    d->nome_linha = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1));
+    if(d->tam_nome_linha > 0) fread(d->nome_linha, sizeof(char), d->tam_nome_linha, f); // Gravando nome da linha no espaço alocada
+    
+    // Concatenando com o terminador
+    d->nome_linha[d->tam_nome_linha] = '\0';
 
     return true;
 }
@@ -143,14 +146,14 @@ bool data_load_field(DATA *d, uint RRN, int8 op, FILE *f){
             // Lendo tamanho string
             fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET);
             fread(&(d->tam_nome_estacao), sizeof(d->tam_nome_estacao), 1, f);
-            // Alocando memória
-            if(d->tam_nome_estacao > 0){
-                // Sobrescrevendo se necessário
-                if(d->nome_estacao == NULL) free(d->nome_estacao);
+            // Sobrescrevendo se necessário
+            if(d->nome_estacao != NULL) free(d->nome_estacao);
 
-                d->nome_estacao = (char*)malloc(sizeof(char)*d->tam_nome_estacao);
-                fread(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f); // Gravando nome da linha no espaço alocada
-            }
+            d->nome_estacao = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1));
+            if(d->nome_estacao > 0 ) fread(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f); // Gravando nome da linha no espaço alocada
+
+            // Concatenando com o terminador
+            d->nome_estacao[d->tam_nome_estacao] = '\0';
 
             break;
             
@@ -163,13 +166,14 @@ bool data_load_field(DATA *d, uint RRN, int8 op, FILE *f){
             fseek(f, aux_U, SEEK_CUR); // Movendo o ponteiro para o campo tam_nome_linha (pulando o nome da estação - aux_U bytes)
             fread(&(d->tam_nome_linha), sizeof(d->tam_nome_linha), 1, f);
             // Alocando memória
-            if(d->tam_nome_linha > 0){
-                // Sobrescrevendo se necessário
-                if(d->nome_linha == NULL) free(d->nome_linha);
+            // Sobrescrevendo se necessário
+            if(d->nome_linha != NULL) free(d->nome_linha);
 
-                d->nome_linha= (char*)malloc(sizeof(char)*d->tam_nome_linha);
-                fread(d->nome_linha, sizeof(char), d->tam_nome_linha, f); // Gravando nome da linha no espaço alocada
-            }
+            d->nome_linha= (char*)malloc(sizeof(char)*(d->tam_nome_linha+1));
+            if(d->tam_nome_linha > 0)fread(d->nome_linha, sizeof(char), d->tam_nome_linha, f); // Gravando nome da linha no espaço alocada
+
+            // Concatenando com o terminador
+            d->nome_linha[d->tam_nome_linha] = '\0';
 
             break;
 
@@ -371,15 +375,13 @@ uint data_get_tam_nome_est(DATA *d){
 }
 
 char* data_get_nome_est(DATA *d){
-    // É impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
     if(d != NULL){ 
+        // É basicamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1));
         
-        for(int i = 0; i < d->tam_nome_estacao; i++){
+        for(int i = 0; i <= d->tam_nome_estacao; i++){
            aux[i] = d->nome_estacao[i];
         }
-
-        aux[d->tam_nome_estacao] = '\0'; // Como não necessariamente o usuário vai ter o tamanho junto da string, é melhor colocarmos o terminador \0 nela
 
         return aux; // Não podemos retornar diretamente o nome da estação que está na struct, ou quebramos a ideia do TAD
     }
@@ -394,15 +396,13 @@ uint data_get_tam_nome_lin(DATA *d){
 }
 
 char* data_get_nome_lin(DATA *d){
-    // É impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
     if(d != NULL){ 
+        // É basicamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1));
         
-        for(int i = 0; i < d->tam_nome_linha; i++){
+        for(int i = 0; i <= d->tam_nome_linha; i++){
            aux[i] = d->nome_linha[i];
         }
-
-        aux[d->tam_nome_linha] = '\0'; // Como não necessariamente o usuário vai ter o tamanho junto da string, é melhor colocarmos o terminador \0 nela
 
         return aux; // Não podemos retornar diretamente o nome da estação que está na struct, ou quebramos a ideia do TAD
     }
@@ -499,10 +499,10 @@ bool data_set_nome_est(DATA *d, char *nome_estacao){
         if(nome_estacao != NULL) d->tam_nome_estacao = strlen(nome_estacao);
         else d->tam_nome_estacao = 0;
 
-        if(d->tam_nome_estacao > 0) d->nome_estacao = (char*)malloc(sizeof(char)*d->tam_nome_estacao); 
+        if(d->tam_nome_estacao > 0) d->nome_estacao = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1)); 
 
-        //A string na struct não terá o terminador
-        for(int i = 0; i < d->tam_nome_estacao; i++){
+        //A string na struct terá o terminador
+        for(int i = 0; i <= d->tam_nome_estacao; i++){
             d->nome_estacao[i] = nome_estacao[i];
         }
         
@@ -513,17 +513,23 @@ bool data_set_nome_est(DATA *d, char *nome_estacao){
 }
 
 bool data_set_nome_lin(DATA *d, char *nome_linha){
-    if(d != NULL && nome_linha != NULL){
+    if(d != NULL){
+        // Sobrescrevendo se necessário
         if(d->nome_linha != NULL){
             free(d->nome_linha);
             d->nome_linha = NULL;
         }
+        
+        // Consideramos que a string passada possui o terminador \0
+        if(nome_linha != NULL) d->tam_nome_linha = strlen(nome_linha);
+        else d->tam_nome_linha = 0;
+
         // Consideramos que a string passada possui o terminador \0
         d->tam_nome_linha = strlen(nome_linha);
-        if(d->tam_nome_linha > 0) d->nome_linha = (char*)malloc(sizeof(char)*d->tam_nome_linha); 
+        if(d->tam_nome_linha > 0) d->nome_linha = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1)); 
 
-        //A string na struct não terá o terminador
-        for(int i = 0; i < d->tam_nome_linha; i++){
+        //A string na struct terá o terminador
+        for(int i = 0; i <= d->tam_nome_linha; i++){
             d->nome_linha[i] = nome_linha[i];
         }
 
@@ -553,4 +559,66 @@ void data_fill_trash(uint RRN, uint byte_registro, FILE *f){
         free(preenche);
         preenche = NULL;
     }
+}
+
+/*==============OUTRAS==============*/
+
+bool data_compare(DATA *d1, DATA *d2, int8 op){
+    // Para não entrar dentro de um possível if, em que use esses ponteiros 
+    if(d1 == NULL || d2 == NULL) return false;
+
+    // Guarda duas strings resultantes de get (eles devem ser desalocadas como dito na descrição das funções gets)
+    char *str1, *str2; // Essas strings terão \0 e assim pode-se usar strcmp
+
+    // Verificando o campo especificado
+    switch(op){
+        case COD_EST:
+            return d1->cod_estacao == d2->cod_estacao;
+        case COD_LIN:
+            return d1->cod_linha == d2->cod_linha;
+        case COD_PROX:
+            return d1->cod_prox_estacao == d2->cod_prox_estacao;
+        case DIST:
+            return d1->dist_prox_estacao == d2->dist_prox_estacao;
+        case COD_LIN_INT:
+            return d1->cod_linha_integra == d2->cod_linha_integra;
+        case COD_EST_INT:
+            return d1->cod_est_integra == d2->cod_est_integra;
+        case NOME_EST:
+            return strcmp(d1->nome_estacao, d2->nome_estacao) == 0;
+        case NOME_LIN:
+            return strcmp(d1->nome_linha, d2->nome_linha) == 0;
+        default:
+            return false;
+    }
+    
+}
+
+void data_print(DATA *d){
+    if(d == NULL) return;
+
+    // Imprimindo cada campo (ser for nulo, devemos imprimir NULO)
+    if(d->cod_estacao != -1) printf("%d ", d->cod_estacao);
+    else printf("NULO ");
+
+    if(d->tam_nome_estacao > 0) printf("%s ", d->nome_estacao);
+    else printf("NULO ");
+    
+    if(d->cod_linha != -1) printf("%d ", d->cod_linha);
+    else printf("NULO ");
+
+    if(d->tam_nome_linha > 0) printf("%s ", d->nome_linha);
+    else printf("NULO ");
+
+    if(d->cod_prox_estacao != -1) printf("%d ", d->cod_prox_estacao);
+    else printf("NULO ");
+
+    if(d->dist_prox_estacao != -1) printf("%d ", d->dist_prox_estacao);
+    else printf("NULO ");
+
+    if(d->cod_linha_integra != -1) printf("%d ", d->cod_linha_integra);
+    else printf("NULO ");
+
+    if(d->cod_est_integra != -1) printf("%d\n", d->cod_est_integra);
+    else printf("NULO\n");
 }
