@@ -122,7 +122,7 @@ bool func_create(FILE *fe, FILE *fs, HEADER *h){
 
             // Colocando nome na árvore (mesmo se o nome for NULL, a funçao avl_inserir trata) - os outros dois parâmetros podem ser quaisquer inteiros
             ok = ok && avl_inserir(ar_nomes, aux = data_get_nome_est(d), 0, 0);  // Nome nunca vai ser nulo
-            free(aux);
+            free(aux); // avl_inserir copia a string para o nó, precisamos liberar memória então da string retornada
             // Colocando par de inteiros na árvore - não importa a string que eu passo como parâmetro
             if(data_get_cod_prox(d) != -1) // Código da estação nunca vai ser nulo -> pares (x, NULO) não são contados
                 ok = ok && avl_inserir(ar_pares, NULL, data_get_cod_est(d), data_get_cod_prox(d));
