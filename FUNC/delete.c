@@ -39,7 +39,7 @@ bool func_delete(){
   
   
   //Inicialização da funcionalidade finalizada!
-  header_set_status(h, REMOVIDO); //Arquivo foi aberto para escrita e seu status deve ser atualizado.
+  header_set_status(h, '0'); //Arquivo foi aberto para escrita e seu status deve ser atualizado.
   header_save_field(h, REMOVIDO, f); //Salva a mudança no registro de cabeçalho.
   
   
@@ -75,7 +75,6 @@ bool func_delete(){
       func_attribute_value(valor, campo, filtro); //Salva o valor inserido no filtro.
       qtdeFil--;
     }
-    
     RRN = 0; //Vamos iniciar a busca pelo início do registro.
     while (1){
       data_load_all(d, RRN, f);
