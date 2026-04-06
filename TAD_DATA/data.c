@@ -220,7 +220,6 @@ bool data_save_all(DATA *d, uint RRN, FILE *f){
 
 bool data_save_field(DATA *d, uint RRN, int8 op, FILE *f){
     if(d == NULL || f == NULL) return false;
-    
     // Byte offset do primeiro byte do registro
     ull off_ini = RRN * 80 + SEEK_INI;
 
@@ -375,7 +374,8 @@ uint data_get_tam_nome_est(DATA *d){
 }
 
 char* data_get_nome_est(DATA *d){
-    if(d != NULL){ 
+    if(d != NULL){
+        if (d->tam_nome_estacao == 0) return NULL; //Se o campo for nulo, retorna nulo.
         // É basicamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1));
         
@@ -485,7 +485,7 @@ bool data_set_cod_est_int(DATA *d, int cod_est_integra){
 }
 
 
-// Não faz sentido haver um set separado para tamanho dos nomes, pois isso daria liberdade para o usuário modificar o tamanho para um valor errado, o que prejudicaria todo sistema
+// Não faz sentido haver um set separado para tamanho dos nomes, pois isso daria liberdade para o usuário modificar o tamanho para um valor errado, o que prejudicaria todo sistema.
 
 bool data_set_nome_est(DATA *d, char *nome_estacao){
     if(d != NULL){
@@ -502,8 +502,10 @@ bool data_set_nome_est(DATA *d, char *nome_estacao){
         if(d->tam_nome_estacao > 0) d->nome_estacao = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1)); 
 
         //A string na struct terá o terminador
-        for(int i = 0; i <= d->tam_nome_estacao; i++){
-            d->nome_estacao[i] = nome_estacao[i];
+        if (d->tam_nome_estacao != 0){
+          for(int i = 0; i <= d->tam_nome_estacao; i++){
+              d->nome_estacao[i] = nome_estacao[i];
+          }
         }
         
         return true;
@@ -525,12 +527,13 @@ bool data_set_nome_lin(DATA *d, char *nome_linha){
         else d->tam_nome_linha = 0;
 
         // Consideramos que a string passada possui o terminador \0
-        d->tam_nome_linha = strlen(nome_linha);
         if(d->tam_nome_linha > 0) d->nome_linha = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1)); 
 
         //A string na struct terá o terminador
-        for(int i = 0; i <= d->tam_nome_linha; i++){
-            d->nome_linha[i] = nome_linha[i];
+        if (d->tam_nome_linha != 0){
+          for(int i = 0; i <= d->tam_nome_linha; i++){
+              d->nome_linha[i] = nome_linha[i];
+          }
         }
 
         return true;
@@ -567,9 +570,6 @@ bool data_compare(DATA *d1, DATA *d2, int8 op){
     // Para não entrar dentro de um possível if, em que use esses ponteiros 
     if(d1 == NULL || d2 == NULL) return false;
 
-    // Guarda duas strings resultantes de get (eles devem ser desalocadas como dito na descrição das funções gets)
-    char *str1, *str2; // Essas strings terão \0 e assim pode-se usar strcmp
-
     // Verificando o campo especificado
     switch(op){
         case COD_EST:
@@ -584,10 +584,14 @@ bool data_compare(DATA *d1, DATA *d2, int8 op){
             return d1->cod_linha_integra == d2->cod_linha_integra;
         case COD_EST_INT:
             return d1->cod_est_integra == d2->cod_est_integra;
-        case NOME_EST:
-            return strcmp(d1->nome_estacao, d2->nome_estacao) == 0;
-        case NOME_LIN:
-            return strcmp(d1->nome_linha, d2->nome_linha) == 0;
+        case NOME_EST: //Usar strcmp() em strings NULAS pode causar segmentation fault, portanto é necessário tratar esses casos.
+            if (d1->nome_estacao != NULL && d2->nome_estacao != NULL) return strcmp(d1->nome_estacao, d2->nome_estacao) == 0;
+            else if (d1->nome_estacao == NULL && d2->nome_estacao == NULL) return true;
+            else return false;
+        case NOME_LIN: //Caso ambas forem não-nulas, compara por strcmp(). Caso ambas forem nulas, são iguais. Caso uma for nula e a outra não, são diferentes.
+            if (d1->nome_linha != NULL && d2->nome_linha != NULL) return strcmp(d1->nome_linha, d2->nome_linha) == 0;
+            else if (d1->nome_linha == NULL && d2->nome_linha == NULL) return true;
+            else return false;
         default:
             return false;
     }
