@@ -183,6 +183,8 @@ bool func_insert_end(DATA *d, HEADER *h, FILE *bin){
 void func_str_to_lower(char *str){
     if(str == NULL) return;
 
+    // Tamanho da string a ser transformada
     int tam = strlen(str); 
+    // Colocando letras em minúsculo
     for(int i = 0; i < tam; i++) str[i] = tolower(str[i]);
 }

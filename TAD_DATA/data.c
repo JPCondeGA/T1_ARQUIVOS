@@ -499,11 +499,13 @@ bool data_set_nome_est(DATA *d, char *nome_estacao){
         if(nome_estacao != NULL) d->tam_nome_estacao = strlen(nome_estacao);
         else d->tam_nome_estacao = 0;
 
-        if(d->tam_nome_estacao > 0) d->nome_estacao = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1)); 
+        if(d->tam_nome_estacao > 0){
+            d->nome_estacao = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1)); 
 
-        //A string na struct terá o terminador
-        for(int i = 0; i <= d->tam_nome_estacao; i++){
-            d->nome_estacao[i] = nome_estacao[i];
+            //A string na struct terá o terminador
+            for(int i = 0; i <= d->tam_nome_estacao; i++){
+                d->nome_estacao[i] = nome_estacao[i];
+            }
         }
         
         return true;
@@ -525,12 +527,13 @@ bool data_set_nome_lin(DATA *d, char *nome_linha){
         else d->tam_nome_linha = 0;
 
         // Consideramos que a string passada possui o terminador \0
-        d->tam_nome_linha = strlen(nome_linha);
-        if(d->tam_nome_linha > 0) d->nome_linha = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1)); 
+        if(d->tam_nome_linha > 0){
+            d->nome_linha = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1)); 
 
-        //A string na struct terá o terminador
-        for(int i = 0; i <= d->tam_nome_linha; i++){
-            d->nome_linha[i] = nome_linha[i];
+            //A string na struct terá o terminador
+            for(int i = 0; i <= d->tam_nome_linha; i++){
+                d->nome_linha[i] = nome_linha[i];
+            }
         }
 
         return true;

@@ -41,7 +41,7 @@ int main(){
         int aux;
         char aux_C;
         char nome[31];
-        printf("REMOVIDO: "); scanf(" %c", &aux_C); data_set_removido(d, aux_C);
+        /*printf("REMOVIDO: "); scanf(" %c", &aux_C); data_set_removido(d, aux_C);
         printf("PROX: "); scanf("%d", &aux); data_set_prox(d, aux);
         printf("COD EST: "); scanf("%d", &aux); data_set_cod_est(d, aux);
         printf("COD LIN: "); scanf("%d", &aux); data_set_cod_lin(d, aux);
@@ -49,14 +49,16 @@ int main(){
         printf("DIST: "); scanf("%d", &aux); data_set_dist(d, aux);
         printf("COD LIN INT: "); scanf("%d", &aux); data_set_cod_lin_int(d, aux);
         printf("COD EST INT: "); scanf("%d", &aux); data_set_cod_est_int(d, aux);
-        printf("NOME EST: "); scanf(" %30[^\n]", nome); data_set_nome_est(d, nome);
-        printf("NOME LIN: "); scanf(" %30[^\n]", nome); data_set_nome_lin(d, nome);
-        //data_save_all(d, RRN, f);
+        printf("NOME EST: "); scanf(" %s", nome); data_set_nome_est(d, nome);
+        printf("NOME LIN: "); scanf(" %s", nome); data_set_nome_lin(d, nome);*/
+        //data_set_nome_est(d, "Luz");
+        data_set_nome_lin(d, NULL);
+        data_save_all(d, RRN, f);
         //data_save_field(d, RRN, REMOVIDO, f);
         //data_save_field(d, RRN, PROX, f);
         //data_save_field(d, RRN, DIST, f);
         //data_save_field(d, RRN, NOME_EST, f);
-        data_save_field(d, RRN, NOME_LIN, f);
+        //data_save_field(d, RRN, NOME_LIN, f);
     }
 
     data_delete(&d);
