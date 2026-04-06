@@ -1,6 +1,6 @@
 #include "contexto.h"
 
-/*================WHERE================*/
+/*================WHERE e DELETE================*/
 
 bool func_where_input(FLAG_FIELD *flags, DATA *filtro, int m){
     // Verifica se a função foi executada com sucesso
@@ -25,7 +25,7 @@ bool func_where_input(FLAG_FIELD *flags, DATA *filtro, int m){
 
         // Atribuindo valor ao campo correto da estrutra
         ok = func_attribute_value(valor, campo, filtro);
-        ok = ok && func_atribbute_flag_field(flags, campo);
+        ok = ok && func_attribute_flag_field(flags, campo);
     }
 
     return ok;
@@ -53,10 +53,54 @@ bool func_where_compare(FLAG_FIELD flags, DATA *d, DATA *filtro){
     return resp;
 }
 
+/*================UPDATE================*/
+
+bool func_copy_data(FLAG_FIELD *flag_carimbo, DATA *destino, DATA *fonte){
+  //Copia todos os valores de "fonte" para "destino", pulando os campos em que "flag_carimbo" é "false".
+  bool semErros = true; //Confere se a função falhar em algum momento.
+  char* nomeest; //Variável auxiliar para receber data_get_nome_est() e data_get_nome_lin().
+  
+  if (flag_carimbo->cod_estacao) semErros = semErros && data_set_cod_est(destino, data_get_cod_est(fonte));
+  
+  if (flag_carimbo->cod_linha) semErros = semErros && data_set_cod_lin(destino, data_get_cod_lin(fonte));
+  
+  if (flag_carimbo->cod_prox_estacao) semErros = semErros && data_set_cod_prox(destino, data_get_cod_prox(fonte));
+  
+  if (flag_carimbo->dist_prox_estacao) semErros = semErros && data_set_dist(destino, data_get_dist(fonte));
+  
+  if (flag_carimbo->cod_linha_integra) semErros = semErros && data_set_cod_lin_int(destino, data_get_cod_lin_int(fonte));
+  
+  if (flag_carimbo->cod_est_integra) semErros = semErros && data_set_cod_est_int(destino, data_get_cod_est_int(fonte));
+  
+  if (flag_carimbo->nome_estacao){
+    nomeest = data_get_nome_est(fonte);
+    semErros = semErros && data_set_nome_est(destino, nomeest);
+    free(nomeest);
+    nomeest = NULL;
+    }
+    
+  if (flag_carimbo->nome_linha){
+    nomeest = data_get_nome_lin(fonte);
+    semErros = semErros && data_set_nome_lin(destino, nomeest);
+    free(nomeest);
+    nomeest = NULL;
+    }
+    
+  return semErros;
+}
+
+bool func_checa_nome_alterado(FLAG_FIELD *flag_carimbo){
+  return flag_carimbo->nome_estacao; //Confere se o nome da estrutura foi marcado para ser alterado.
+}
+
+bool func_checa_par_alterado(FLAG_FIELD *flag_carimbo){
+  if (flag_carimbo->cod_estacao || flag_carimbo->cod_prox_estacao) return true; //Confere se o código da estação ou o código da próxima estação foi marcado para ser alterado.
+  return false;
+}
 
 /*================FLAGS================*/
 
-bool func_atribbute_flag_field(FLAG_FIELD *flags, char *campo){
+bool func_attribute_flag_field(FLAG_FIELD *flags, char *campo){
     if(flags == NULL || campo == NULL) return false;
     
     // Colocando o nome do campo em minusculo -> Permite que a mesma função seja usado no Create e nas outras funcionalidades
@@ -110,6 +154,69 @@ bool func_init_flag_field(FLAG_FIELD *flags){
 
 /*================AUXILIAR================*/
 
+bool func_inicializar(HEADER** h, DATA** d){
+    
+    //Inicializa um registro de dados.
+    *d = data_create();  
+    if(*d == NULL) return false;
+    
+    //Inicializa um registro de cabeçalho.
+    *h = header_create();
+    if(*h == NULL){
+      data_delete(d); //Não é necessário passar o endereço como entrada, pois "d" já é ponteiro de ponteiro. 
+      return false;
+    }
+    
+    return true;
+}
+
+bool func_inicializar_arvores(ARVORE** nomes, ARVORE** pares, HEADER* h, DATA* d, FILE* f){
+  
+  //Todas as funções que chamam esta função conferem se "h == NULL || d == NULL" antes de chamar esta função, portanto não realizamos o teste novamente.
+  
+  *nomes = avl_criar_arvore(false); //Árvore que irá guardar quantas estações diferentes existem no registro de dados.
+  *pares = avl_criar_arvore(true); //Árvore que irá guardar quantos pares de estação e código existem no registro de dados.
+  if (*nomes == NULL || *pares == NULL){
+  
+    avl_apagar_arvore(nomes); //Não é necessário passar o endereço como entrada, pois "nomes" e "pares" já são ponteiro de ponteiro. 
+    avl_apagar_arvore(pares); //avl_apagar_arvore() confere se os ponteiros passados são nulos, então não é necessário se preocupar com double free().
+    return false;
+  }
+  
+  int RRN = 0; //Marca qual o próximo registro a ser lido.
+  char* nomeest; //Variável auxiliar para receber valores do registro.
+  header_load_all(h, f); //Caso o cabeçalho não tenha sido inicializado, o carrega.
+  
+  while(1){
+      data_load_all(d, RRN, f);
+      if (feof(f)) break; //Checa por END OF FILE depois de ler do arquivo.
+      if (data_get_removido(d) != '1'){ //Pula registros removidos
+      
+        //Preenche ambas as árvores com as informações do registro
+        nomeest = data_get_nome_est(d); //data_get_nome_est() retorna um array dinâmico que precisa ser desalocado após ser usado.
+        avl_inserir(*nomes, nomeest, 0, 0);
+        free(nomeest);
+        nomeest = NULL;
+        avl_inserir(*pares, NULL, data_get_cod_est(d), data_get_cod_prox(d));
+      }
+      RRN++;  //Atualiza o contador de registros.
+  }
+  
+  
+  /*
+  if(avl_get_n(ar_nomes) != header_get_nmr_estacoes(h) || avl_get_n(ar_pares) != header_get_nmr_pares(h)){
+    //Se houver divergência entre o cabeçalho e as árvores, provavelmente algum nó não foi inserido corretamente.
+    
+    avl_apagar_arvore(&ar_nomes); //avl_apagar_arvore() confere se o ponteiro passado é NULL, então não há necessidade de realizar mais testes para evitar double free().
+    avl_apagar_arvore(&ar_pares);
+    return false;
+  }
+  */
+  
+  return true;
+  
+}
+
 bool func_attribute_value(char *valor, char *campo, DATA *d){
     if(valor == NULL || campo == NULL || d == NULL) return false;
 
@@ -160,7 +267,7 @@ bool func_attribute_value(char *valor, char *campo, DATA *d){
     }
 
     // Atribuindo código da estação de integração
-    else if(strcmp(campo, "codestacaointeg") == 0 || strcmp(campo, "codestintegra") == 0){
+    else if(strcmp(campo, "codestacaointeg") == 0 || strcmp(campo, "codestacaointegra") == 0){
         if(valor[0] != '\0' && strcmp(valor, "NULO") != 0) data_set_cod_est_int(d, atoi(valor));
         else data_set_cod_est_int(d, -1);
     }
