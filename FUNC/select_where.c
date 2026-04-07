@@ -44,6 +44,8 @@ void func_select_where_interface(){
 
             // Impressão no caso de nenhum registro coresponder a consulta
             if(ok && !encontrado_um) printf("Registro inexistente.\n");
+
+            printf("\n");
         }
 
     }
@@ -97,7 +99,6 @@ bool func_select_where(FLAG_FIELD flags, DATA *filtro, bool *encontrado_um, FILE
                 data_print(d);
             }
         }
-        printf("\n");
     }
 
     if(d != NULL) data_delete(&d);

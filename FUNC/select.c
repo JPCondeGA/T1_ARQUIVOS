@@ -3,7 +3,7 @@
 bool func_select(){
     
     // Consideramos que o nome do arquivo não será maior que 30 bytes
-    char nome_arq[31];
+    char nome_arq[TAM_BUFFER];
     // Lendo o nome do arquivo de entrada
     scanf(" %30s", nome_arq);
     // Ponteiro para o arquivo de entrada
@@ -15,7 +15,7 @@ bool func_select(){
     if(d == NULL){
       fclose(f);
       return (false); //Se houve falha na inicialização do registro, fecha o arquivo e retorna "false".
-      }
+    }
     
     uint RRN = 0; //Demarca qual o próximo registro que deve ser lido.
     int aux = 0; //Ajuda a detectar campos nulos.

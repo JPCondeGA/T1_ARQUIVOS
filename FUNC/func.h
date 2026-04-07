@@ -17,6 +17,7 @@
     /* Realiza a funcionalidade [3] (SELECT FROM WHERE) por meio de funções auxiliares. Inicializa valores e executa operações de entrada e saída. Acessível do arquivo main.c do projeto. */
     void func_select_where_interface();    
     
+    bool func_delete_interface();
     bool func_delete();
     
     bool func_insert();

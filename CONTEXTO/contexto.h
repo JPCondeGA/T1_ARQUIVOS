@@ -7,7 +7,7 @@
     #include <ctype.h>
 
     #define NMR_CAMPOS 8
-    #define TAM_BUFFER 30
+    #define TAM_BUFFER 31
 
     typedef struct flag_field_ FLAG_FIELD;
 
@@ -81,6 +81,9 @@
       ATENÇÃO: Essa função chama header_load_all() para evitar erros caso o cabeçalho passado não tenha sido inicializado.
       Portanto, chame-a apenas antes de realizar alterações na estrutura do cabeçalho, ou após salvar essas alterações no arquivo. Caso contrário, divergências podem ocorrer.*/
     bool func_inicializar_arvores(ARVORE** nomes, ARVORE** pares, HEADER* h, DATA* d, FILE* f);
+
+    /**/
+    bool func_consistence(HEADER *h);
 
     /* Atribui um valor a um campo específico da estrutura.
     - Recebe um string com o valor desejado para o campo, outra string indicando o campo e um ponteiro para estrutura que representa um registro de dados. 

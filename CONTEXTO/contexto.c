@@ -217,6 +217,13 @@ bool func_inicializar_arvores(ARVORE** nomes, ARVORE** pares, HEADER* h, DATA* d
   
 }
 
+bool func_consistence(HEADER *h){
+    // Retorna-se false para não entrar em nenhum possível if que acesse esses ponteiros
+    if(h == NULL) return false;
+
+    return header_get_status(h) == '1';
+}
+
 bool func_attribute_value(char *valor, char *campo, DATA *d){
     if(valor == NULL || campo == NULL || d == NULL) return false;
 
@@ -267,7 +274,7 @@ bool func_attribute_value(char *valor, char *campo, DATA *d){
     }
 
     // Atribuindo código da estação de integração
-    else if(strcmp(campo, "codestacaointeg") == 0 || strcmp(campo, "codestacaointegra") == 0){
+    else if(strcmp(campo, "codestacaointeg") == 0 || strcmp(campo, "codestintegra") == 0){
         if(valor[0] != '\0' && strcmp(valor, "NULO") != 0) data_set_cod_est_int(d, atoi(valor));
         else data_set_cod_est_int(d, -1);
     }
@@ -292,4 +299,5 @@ void func_str_to_lower(char *str){
 
     int tam = strlen(str); 
     for(int i = 0; i < tam; i++) str[i] = tolower(str[i]);
+    return;
 }
