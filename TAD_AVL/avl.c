@@ -112,6 +112,10 @@ NO* avl_criar_no(char* nome, PAR par, bool op){
   if (no == NULL) return NULL;
 
   if(!op){
+    if (nome == NULL){
+      free(no);
+      return NULL;
+      }
     int tamanho = strlen(nome);
     // Alocando um byte a mais para o terminador
     no->nome = (char*)malloc(sizeof(char) * (tamanho+1));

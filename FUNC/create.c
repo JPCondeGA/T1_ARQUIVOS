@@ -53,7 +53,11 @@ void func_create_interface(){
     // Lendo o nome do arquivo de saída
     scanf(" %30s", nome_arq);
 
-    fs = fopen(nome_arq, "wb"); // Arquivo de saída deve ser binário
+    /*// Criando arquivo se necessário
+    fs = fopen(nome_arq, "rb");
+    fclose(fs);*/
+
+    fs = fopen(nome_arq, "wb"); // Arquivo de saída deve ser binário (vamos considerar que o arquivo já está criado)
     if(fs == NULL) ok = false;
 
     // A maior linha do arquivo é a primeiro com 99 caracteres
@@ -73,7 +77,7 @@ void func_create_interface(){
     
     if(fs != NULL) fclose(fs), fs = NULL;
     if(fe != NULL) fclose(fe), fe = NULL;
-    if(h != NULL) header_delete(&h);
+    header_delete(&h); // Verificação interna
 
     if(!ok) printf("Falha no processamento do arquivo.\n");
     else BinarioNaTela(nome_arq);
@@ -140,9 +144,10 @@ bool func_create(FILE *fe, FILE *fs, HEADER *h){
         header_set_nmr_pares(h, avl_get_n(ar_pares));
     }
 
-    if(d != NULL) data_delete(&d);
-    if(ar_nomes != NULL) avl_apagar_arvore(&ar_nomes);
-    if(ar_pares != NULL) avl_apagar_arvore(&ar_pares);
+    // Desalocando estruturas
+    data_delete(&d);
+    avl_apagar_arvore(&ar_nomes);
+    avl_apagar_arvore(&ar_pares);
 
     return ok;
 }
