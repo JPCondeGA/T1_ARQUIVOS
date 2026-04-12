@@ -1,249 +1,216 @@
 #include "avl.h"
-#define maior(a, b) ((a > b) ? a : b)
+#define maior(a, b) ((a > b) ? a : b) // Macro que escolhe o maior de dois valores
 
 typedef struct no_ NO;
 typedef struct arvore_ ARVORE;
 typedef struct par_ PAR;
 
+// Estrutura que representa um par de números de forma ordenado
 struct par_{
   int menor; // Menor código do par (código da estação, código da próxima estação)
   int maior; // Maior código do par (código da estação, código da próxima estação)
 };
 
+// Estrutura que representa um nó da árvore binário que pode ser ordenada por nome oou por pares de inteiros
 struct no_{
   uint frequencia; // Quantidade de vezes que uma chave aparece no arquivo.
   int altura; // Altura do nó
-  char* nome; // Chave (no caso da avl de nomes )
+  char* nome; // Chave (no caso da avl de nomes)
   PAR par; // Chave (no caso da avl de pares)
   NO* dir; // Ponteiro para o filho direito
   NO* esq; // Ponteiro para o filho esquerdo
 };
 
+// Estrutura que representa a árvore que pode ser de dois tipos 
 struct arvore_{
-    NO* raiz;
+    NO* raiz; // Nó raiz da árvore
     uint n; // Quantidade de nós do árvore
-    bool op; // true -> árvore de pares; false -> árvore de nomes
+    bool tipo; // true -> árvore de pares; false -> árvore de nomes
 };
-
-/* Para evitar a criação de outra AVL, utilizamos um nó com dupla chave. As funções irão acessar uma ou outra chave, a depender do parâmetro op cujo valor true significa o par (e false, o nome). */
-
-/* Para ordenação de uma AVL de pares foi usado o seguinte método: consideramos o campo maior como mais relevante; desse modo se n1.maior > n2.maior (n1 e n2 são nós), temos certeza que n1 está a direita de n2. Em caso de n1.maior == n2.maior, olhamos o campo menor. */
 
 /*=============FUNÇÕES OCULTAS============*/
 
+/*=-=-ALOCAÇÃO E DESALOCAÇÃO DE NÓ-=-=-=*/
+
 /* Dinamicamente aloca espaço para um nó e para uma chave.
-  Retorna um nó, com o string passado em "nome" salvo dentro dele.
-  - Usado nas funções de inserção.*/
-NO* avl_criar_no(char* nome, PAR par, bool op);
+  - Recebe uma string para o nome, uma estrutura de pares e booleano para indicar o tipo da ordenação da árvore.
+  - Retorna um nó, com a string passada e o par de inteiros salvo dentro dele.
 
-/* Desaloca o espaço da chave do nó, então desaloca o nó em si.
+Usado nas funções de inserção. */
+NO* avl_criar_no(char* nome, PAR par, bool tipo);
+
+/* Desaloca os campos necessários do nó, então desaloca o nó em si.
   - Recebe um ponteiro de ponteiro do nó a ser apagado.
-  - Retorna "true" se o nó for apagado corretamente e "false" caso contrário.
-  - Usado nas funções de remoção.*/
-bool avl_apagar_no(NO** no, bool op);
+  - Retorna true, se o nó for apagado corretamente; false, caso contrário.
 
-/* Retorna o valor da altura do nó passado como entrada, retorna 0 caso o ponteiro para nó passado for NULL.
-  - Usado nas funções de inserção e remoção para manter o equilíbrio da árvore.*/
+Usado nas funções de remoção. */
+bool avl_apagar_no(NO** no);
+
+
+/*=-=-BALANCEAMENTO=-=-=*/
+
+/* Retorna o valor da altura do nó passado como entrada. 
+  - Recebe um ponteiro para um nó.
+  - Retorna a altura do nó correspondente; -1, no caso de ponteiro NULL
+
+Usado nas funções de inserção e remoção para manter o equilíbrio da árvore. */
 int avl_altura_no(NO* no);
 
+/* Calcula o fator de balanceamento (FB) de um nó usando a altura de seus dois filhos.
+  - Recebe o nó a ter seu FB calculado.
+  - Retorna o FB correspondente
+
+  Usado nas funções de inserção e remoção para manter o equilíbrio da árvore. */
+int avl_fb(NO* no);
+
 /* Realiza uma rotação à esquerda de acordo com o conceito de árvore AVL.
-  - Usado nas funções de inserção e remoção para manter o equilíbrio da árvore.*/
+  - Recebe o ponteiro para o nó a ser analisado.
+  - Retorna o nó que ficou na posição daquele passado por parâmetro.
+
+Usado nas funções de inserção e remoção para manter o equilíbrio da árvore. */
 NO* avl_rodar_e(NO* no);
 
 /* Realiza uma rotação à direta de acordo com o conceito de árvore AVL.
-  - Usado nas funções de inserção e remoção para manter o equilíbrio da árvore.*/
+  - Recebe o ponteiro para o nó a ser analisado.
+  - Retorna o nó que ficou na posição daqueel passado por parâmetro.
+
+Usado nas funções de inserção e remoção para manter o equilíbrio da árvore. */
 NO* avl_rodar_d(NO* no);
-
-/* Calcula o fator de balanceamento de um nó usando a altura de seus dois filhos.
-  - Usado nas funções de inserção e remoção para manter o equilíbrio da árvore.*/
-int avl_fb(NO* no);
-
-/* Função recursiva que insere um novo nó na árvore.
-  "*flag" é sempre passada como "false".
-  Caso um nó for inserido com sucesso, "*flag" será atualizada para "true". Isso não ocorre se um nó com o mesmo nome já se encontrava na árvore.
-  - Usada na função de inserção.*/
-NO* avl_inserir_no(NO* cima, NO* baixo, bool op, bool *flag);
-
-/* Recebe um nó e um ponteiro de ponteiro auxiliar.
-  Encontra o maior filho à esquerda do nó passado como entrada, guarda seu ponteiro na variável auxiliar "*aux" e o remove da árvore.
-  Rebalanceia e retorna a nova subárvore à esquerda do nó de entrada.
-  É necessário passar um ponteiro de ponteiro auxiliar, pois "*aux" apontará para o maior filho à esquerda no retorno.
-  Se um ponteiro regular fosse passado, a informação seria perdida ao sair do escopo.
-  Note que, apesar do nome da função, a troca ocorre após seu retorno.
-  - Usado na função de remoção.*/
-NO* avl_troca_com_maior_filho(NO* no, NO** aux);
-
-/* Procura o nó a ser removido e escolhe uma estratégia de remoção dependendo de seu estado.
-  Se o nó possui frequência maior que 1, ela é atualizada e a remoção é encerrada sem remover o nó.
-  Se o nó possuir frequência igual a 1, então confere seu número de filhos.
-  Se ele possuir 0 ou 1 filhos, remove o nó e transfere o filho (se existir) para seu lugar.
-  Se ele possuir 2 filhos, chama "avl_troca_com_maior_filho()" e então troca seu lugar com o de seu maior filho à esquerda.
-  Depois, apaga o nó e re-equilibra a árvore.
-  "no" é a raiz da árvore, não o nó a ser removido.
-  "nome" é a chave que deve ser procurada para a remoção.
-  "*resp" guarda informação se o nó que deve ser removido foi encontrado ou não e de qual estratégia foi usada, para decidir se "avl_remover()" retornará "true" ou "false".
-  - Usado na função de remoção.*/
-NO* avl_remover_no(NO* no, char* nome, PAR par, bool op, int8 *resp);
-
-/* Função auxiliar de "avl_apagar_arvore()".
-  Recursão que percorre a árvore em pós-ordem, apagando seus nós pelo caminho.
-  Não se preocupa em mantê-la equilibrada, pois seu intuito é esvaziar a árvore completamente.*/
-void avl_apagar_arvore_no(NO* no, bool op);
 
 /* Calcula se um dado nó está desequilibrado, e aplica a rotação necessária de acordo com o conceito de árvore AVL.
   - Usado nas funções de inserção e remoção.*/
 NO *avl_balanceia(NO* no);
 
-/**/
-int8 avl_compara_no(NO* no, char* nome, PAR par, bool op);
+/*=-=-INSERÇÃO-=-=*/
 
-/**/
+/* Função recursiva que insere um novo nó na árvore. Caso já exista nó com a chave, o nó já existente tem sua frequência incrementada e a flag continua false para correções na função de inserir.
+  - Recebe o nó atual que está sendo visitado na árvore (cima), o nó a ser inserido (baixo), o tipo de ordenação da árvore e um ponteiro para flag para indicar se foi de fato adicionado um novo nó.
+  - Retorna a nova raiz da (sub)árvore na volta da recursão. */
+NO* avl_inserir_no(NO* cima, NO* baixo, bool tipo, bool *novo);
+
+
+/*=-=-REMOÇÃO-=-=*/
+
+/* Encontra o maior filho à esquerda do nó passado como entrada, guarda seu ponteiro na variável auxiliar "*aux" e o remove da árvore, rebalanceando. 
+  - Recebe um nó e um ponteiro de ponteiro auxiliar.
+  - Retorna a nova raiz da subárvore à esquerda do nó de entrada.
+  
+Note que, apesar do nome da função, a troca ocorre após seu retorno (ela só encontra o maior filho à esquerda, pega-o e remove-o).
+Usado na função de remoção. */
+NO* avl_troca_com_maior_filho(NO* no, NO** aux);
+
+/* Procura o nó a ser removido e escolhe uma estratégia de remoção dependendo de seu estado.
+  * 1. Se o nó possui frequência maior que 1, ela é atualizada e a remoção é encerrada sem remover o nó.
+  * 2. Se o nó possuir frequência igual a 1, então confere seu número de filhos.
+  * 3. Se ele possuir 0 ou 1 filhos, remove o nó e transfere o filho (se existir) para seu lugar.
+  * 4. Se ele possuir 2 filhos, chama "avl_troca_com_maior_filho()" e então troca seu lugar com o de seu maior filho à esquerda.
+  Depois, apaga o nó e re-equilibra a árvore.
+  - Recebe a raiz da (sub)árvore que está sendo buscado o nó a ser removido, a chave (nome ou par) que deve ser procurada para a remoção, o tipo de ordenação da árvore e um ponteiro para uma flag que guarda informação se o nó que deve ser removido foi encontrado ou não e de qual estratégia foi usada.
+  - Retorna a nova raiz da (sub)árvore na volta da recursão.
+  
+resp terá o valor 1 para o caso 1; 2 para o casos 2, 3 e 4; 0 para o caso de não se achar o nó a ser removido*/
+NO* avl_remover_no(NO* no, char* nome, PAR par, bool tipo, int8 *resp);
+
+/*=-=-OUTRAS-=-=*/
+
+/* Função recursiva que percorre a árvore em pós-ordem, apagando seus nós pelo caminho.
+  - Recebe a raiz da (sub)árvore a ser percorrida.
+
+Não se preocupa em mantê-la equilibrada, pois seu intuito é esvaziar a árvore completamente.*/
+void avl_apagar_arvore_no(NO* no);
+
+/* Compara a chave de um nó com uma das chaves passadas a depender do tipo de ordenação.
+  - Recebe o nó a ser comparado, as duas chaves passadas (nome ou par) e o tipo da ordenação da árvore.
+  - Retorna 1 se a chave correspondente ao tipo de ordenação for maior que a mesma chave do nó; retorna 0, se forem iguais; e -1, se for menor. */
+int8 avl_compara_no(NO* no, char* nome, PAR par, bool tipo);
+
+/* Cria um par, colocando a ou b como o valor maior do par, e o outro como menor.
+  - Recebe os dois inteiros do par (pode ser em qualquer ordem).
+  - Retorna uma estrutura que representa um par de inteiros ordenada.*/
 PAR avl_criar_par(int a, int b);
 
-/* Função auxiliar de "avl_print_em_ordem()".
-  Percorre a árvore em em-ordem, imprimindo o nome salvo em cada nó pelo caminho.*/
-void avl_print_em_ordem_no(NO* no, bool op);
+/* Função auxiliar de "avl_print_em_ordem()". Percorre a árvore em em-ordem, imprimindo o nome salvo em cada nó pelo caminho.
+  - Recebe a raiz da (sub)árvore a ser percorrida e o tipo de ordenação da árvore.*/
+void avl_print_em_ordem_no(NO* no, bool tipo);
+
 
 /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
-NO* avl_criar_no(char* nome, PAR par, bool op){ 
-  // Alocando NO
-  NO* no = (NO*)malloc(sizeof(NO));
-  if (no == NULL) return NULL;
-
-  if(!op){
-    if (nome == NULL){
-      free(no);
-      return NULL;
-      }
-    int tamanho = strlen(nome);
-    // Alocando um byte a mais para o terminador
-    no->nome = (char*)malloc(sizeof(char) * (tamanho+1));
-    // Em caso de falha de alocação de espaço para o nome
-    if (no->nome == NULL){
-        free(no);
-        return NULL;
-    }
-    strcpy(no->nome, nome);
-  }
-  else{
-    no->nome = NULL;
-  }
-
-  no->par = par;
-
-  no->dir = NULL;
-  no->esq = NULL;
-  no->frequencia = 1; //Inicia em 1, pois um nó com frequência 0 é deletado.
-  no->altura = 0; // O nó é uma folha
-
-  return no;
-}
-
-
-bool avl_apagar_no(NO** no, bool op){
-
-  if (no == NULL || *no == NULL) return false;
+ARVORE* avl_criar_arvore(bool tipo){
   
-  if(!op && (*no)->nome != NULL){
-    free((*no)->nome);
-    (*no)->nome = NULL;
-  }
+  ARVORE* ar = (ARVORE*)malloc(sizeof(ARVORE)); // Alocando a árvore 
+  if (ar == NULL) return NULL; // Verificando alocação
   
-  free(*no);
-  *no = NULL;
-  
-  return true;
-}
-
-ARVORE* avl_criar_arvore(bool op){
-  
-  ARVORE* ar = (ARVORE*)malloc(sizeof(ARVORE));
-  if (ar == NULL) return NULL;
-  
+  // Inicializando valores
   ar->raiz = NULL;
-  ar->op = op;
+  ar->tipo = tipo; // Tipo de ordenação da árvore (não será mudada após ser criada)
   ar->n = 0;
   
   return ar;
 }
 
-void avl_apagar_arvore_no(NO* no, bool op){
-    if (no == NULL) return;
 
-    avl_apagar_arvore_no(no->esq, op);
-    avl_apagar_arvore_no(no->dir, op);
-
-    avl_apagar_no(&no, op);
-    return;
-}
-
-// Novamente, como o usuário não tem acesso a nós, uma função auxiliar é necessária para iniciar funções recursivas que requerem nós como entrada.
 bool avl_apagar_arvore(ARVORE** ar) {
-    if (ar == NULL || *ar == NULL) return false;
+    if (ar == NULL || *ar == NULL) return false; // Verificando ponteiros
     
-    avl_apagar_arvore_no((*ar)->raiz, (*ar)->op);
+    avl_apagar_arvore_no((*ar)->raiz); // Percurso em-ordem recursivo
     
-    free(*ar);
-    *ar = NULL;
+    free(*ar); // Desalocando a árvore em si
+    *ar = NULL; // Setando NULL para evitar acessos indevido
     
     return true;
 }
 
 /*=============INSERÇÃO============*/
 
-/* Função recursiva inicialmente chamada por "avl_inserir()".
-Baixo é o nó a ser inserido. Cima é o nó "atual" que está sendo comparado com baixo.
-Não é necessário conferir se "baixo" é NULL pois "avl_inserir()" faz a verificação antes de iniciar esta função. */
-NO* avl_inserir_no(NO* cima, NO* baixo, bool op, bool *flag){
+NO* avl_inserir_no(NO* cima, NO* baixo, bool tipo, bool *novo){
   
+  // Se chegamos ao fim da árvore, o nó deve ser adicionado ali
   if(cima == NULL){
     cima = baixo;
-    *flag = true; // Um novo nó foi adicionado
+    *novo = true; // O novo nó foi adicionado
     return cima;
   }
   
-  int8 comp = avl_compara_no(cima, baixo->nome, baixo->par, op);
+  //Caso contrário, devemos saber em qual direção devemos continuar procurando o local para inserí-lo, por isso comparando
+  int8 comp = avl_compara_no(cima, baixo->nome, baixo->par, tipo); 
 
-  // Se cima e baixo possuem a mesma chave, então são a mesma estação. O valor da frequência do nó existente é atualizado e o nó a ser inserido não é mais necessário.
+  // Se cima e baixo possuem a mesma chave, então são a mesma estação ou mesmo par. O valor da frequência do nó existente é atualizado e o nó novo não será inserido.
   if(comp == 0){
     cima->frequencia++;
-    avl_apagar_no(&baixo, op);
+    *novo = false; // O novo nó não foi adicionado 
     return cima; 
   }
+
   // Inserção regular de AVL
   else if (comp == -1){ 
-    cima->esq = avl_inserir_no(cima->esq, baixo, op, flag);
+    cima->esq = avl_inserir_no(cima->esq, baixo, tipo, novo); // Continuando pela esquerda
   }
   else{
-    cima->dir = avl_inserir_no(cima->dir, baixo, op, flag);
+    cima->dir = avl_inserir_no(cima->dir, baixo, tipo, novo); // Continuando pela direita
   }
   
-  return avl_balanceia(cima);
+  return avl_balanceia(cima); // Rebalaceando e retornando o tipo da (sub)árvore rebalanceada
 }
 
-// O usuário não tem acesso a nós, então inserção e remoção precisam de uma função auxiliar para iniciar a recursão
 bool avl_inserir(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao){
-    if (ar == NULL) return false;
+    if (ar == NULL) return false; // Verificnado ponteiro
     
-    // Criando par
-    PAR par = avl_criar_par(cod_estacao, cod_prox_estacao);
+    PAR par = avl_criar_par(cod_estacao, cod_prox_estacao); // Criando par
 
     // Alocando NO
-    NO* no = avl_criar_no(nome, par, ar->op);
-    // Falha na alocação do nó
-    if (no == NULL) return false;
+    NO* no = avl_criar_no(nome, par, ar->tipo);
+    if (no == NULL) return false; // Falha na alocação do nó
 
-    // Confere se um novo nó foi realmente inserido ou se só houve incremento de frequência de algum já existente
-    bool flag = false;
-  
-    ar->raiz = avl_inserir_no(ar->raiz, no, ar->op, &flag);
+    bool novo = false; // Confere se um novo nó foi realmente inserido ou se só houve incremento de frequência de algum já existente
 
-    // Se houve a inserção de fato de um novo nó
-    if(flag) ar->n++; 
+    ar->raiz = avl_inserir_no(ar->raiz, no, ar->tipo, &novo); // Iniciando recursão
 
+    // Verificando se foi adicionado de fato um novo nó
+    if(novo) ar->n++; // Se houve a inserção de fato de um novo nó, aumentamos a quantidade de nós da árvore
+    else avl_apagar_no(&no); // Senão, devemos apagar o nó alocado
+    
     return true;
-
 }
 
 /*=============REMOÇÃO============*/
@@ -258,47 +225,50 @@ NO* avl_troca_com_maior_filho(NO* no, NO** aux){
         
         // Esta função é recursiva, então aux é um ponteiro de ponteiro para podermos acessar este ponteiro na volta das chamadas.
         *aux = no; 
+
         // Salva a subárvore esquerda, caso exista
         NO* aux2 = no->esq; 
         
         no->esq = NULL;
         no->dir = NULL;
+
         return aux2;
     }
     
-    // Continua a procura pelo maior filho
-    no->dir = avl_troca_com_maior_filho(no->dir, aux); 
+    no->dir = avl_troca_com_maior_filho(no->dir, aux); // Continua a procura pelo maior filho
     
     // A subárvore direita do nó anterior ao maior filho agora é a subárvore esquerda do maior filho
-    return avl_balanceia(no);
+    return avl_balanceia(no); // Retornando a raiz da árvore balanceada (o maior filho foi retirado)
 }
 
 
-NO* avl_remover_no(NO* no, char* nome, PAR par, bool op, int8 *resp){
-  // Chegou-se no fim da árvore e não encontrou o nó procurado
-  if (no == NULL) return NULL;
+NO* avl_remover_no(NO* no, char* nome, PAR par, bool tipo, int8 *resp){
+  if (no == NULL){ // Chegou-se no fim da árvore e não encontrou o nó procurado
+    *resp = 0;
+    return NULL; 
+  }
   
-  int8 comp = avl_compara_no(no, nome, par, op);
+  int8 comp = avl_compara_no(no, nome, par, tipo); // Comprando o nó atual com as chaves passadas
 
   // Procurando nó
-  if(comp < 0) no->esq = avl_remover_no(no->esq, nome, par, op, resp);
-  else if(comp > 0) no->dir = avl_remover_no(no->dir, nome, par, op, resp);
+  if(comp < 0) no->esq = avl_remover_no(no->esq, nome, par, tipo, resp); // Continuando pela esquerda 
+  else if(comp > 0) no->dir = avl_remover_no(no->dir, nome, par, tipo, resp); // Continuando pela direita
   // Nó encontrado
   else{
     
     //Primeiro caso: O nó a ser removido foi inserido mais de uma vez (frequência maior que 1)
     if (no->frequencia > 1){ 
-        // Caso houver mais de uma estação com o mesmo nome, o nó não é removido, apenas se decrementa o contador de quantas vezes ela foi inserida.
+        // Caso houver mais de uma estação com o mesmo nome ou mais de um par (codEstação, codProxEstação), o nó não é removido, apenas se decrementa o contador de quantas vezes ela foi inserida.
         no->frequencia--;
         *resp = 1;
         return no;
     }
     
-    NO* aux; 
+    NO* aux; // Recebe o filho do nó a ser removido ou maior descendente à esquerda
     *resp = 2;
     // Segundo caso: O nó deve ser de fato removido e tem 0 ou 1 filho(s)
     if (no->esq == NULL || no->dir == NULL){
-        // Para não perder o nó que será apagado
+        // Para não perder os possíveis filhos do nó que será apagado
         if(no->esq == NULL){
             aux = no->dir;
             no->dir = NULL;
@@ -308,7 +278,7 @@ NO* avl_remover_no(NO* no, char* nome, PAR par, bool op, int8 *resp){
             no->esq = NULL;
         }
 
-        avl_apagar_no(&no, op);
+        avl_apagar_no(&no);
       
         return aux;
     }
@@ -316,73 +286,42 @@ NO* avl_remover_no(NO* no, char* nome, PAR par, bool op, int8 *resp){
     else{ 
     
         aux = NULL;      
-        // O maior filho é removido da subárvore esquerda e salvo em aux
-        no->esq = avl_troca_com_maior_filho(no->esq, &aux); 
-                
+        no->esq = avl_troca_com_maior_filho(no->esq, &aux); // O maior filho é removido da subárvore esquerda e salvo em aux        
+
         // Substitui no com aux
         aux->esq = no->esq;
         aux->dir = no->dir;
         aux->altura = no->altura;
                 
-        //Apaga o no substituído.
-        avl_apagar_no(&no, op);
-                
-        //Atualiza o ponteiro no para o nó em aux.
-        no = aux;
+        avl_apagar_no(&no); // Apaga o no substituido
+
+        no = aux; //Atualiza o ponteiro no para o nó em aux.
       }
       
     }
     
-    return avl_balanceia(no);
+    return avl_balanceia(no); // Balanceando e retornando a raiz da (sub)árvore balanceada
 }
 
-// O usuário não tem acesso a nós, então inserção e remoção precisam de uma função auxiliar para iniciar a recursão.
 bool avl_remover(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao){
-    if (ar == NULL || ar->raiz == NULL) return false;
+    if (ar == NULL || ar->raiz == NULL) return false; // Verificando ponteiros
 
     /* - 0 -> se nó a ser removido não foi encontrado;
     - 1 -> se nó a ser removido foi encontrado
     - 2 -> se nó a ser removido foi de fato removido (e não só decrementou a frequência)*/
     int8 resp = 0;
 
-    PAR par = avl_criar_par(cod_estacao, cod_prox_estacao);
+    PAR par = avl_criar_par(cod_estacao, cod_prox_estacao); // Criando par para busca, se necessário
     
-    ar->raiz = avl_remover_no(ar->raiz, nome, par, ar->op, &resp);
+    ar->raiz = avl_remover_no(ar->raiz, nome, par, ar->tipo, &resp);
 
     // O nó a ser removido foi encontrado
     if(resp != 0){
-        // Um nó foi de fato removido, e não apenas atualizado.
-        if(resp == 2) ar->n--;
-        
+        if(resp == 2) ar->n--; // Um nó foi de fato removido, e não apenas atualizado.
         return true;
     }
 
     return false;
-}
-
-/*=============ROTAÇÕES============*/
-
-NO* avl_rodar_e(NO* no){
-    NO* aux = no->dir;
-    no->dir = aux->esq;
-    aux->esq = no;
-
-    // Atualizando alturas.
-    no->altura = maior(avl_altura_no(no->esq), avl_altura_no(no->dir)) + 1; 
-    aux->altura = maior(avl_altura_no(aux->esq), avl_altura_no(aux->dir)) + 1;
-  
-    return aux;
-}
-
-NO* avl_rodar_d(NO* no){
-  NO* aux = no->esq;
-  no->esq = aux->dir;
-  aux->dir = no;
-  
-  no->altura = maior(avl_altura_no(no->esq), avl_altura_no(no->dir)) + 1; //Atualizando alturas
-  aux->altura = maior(avl_altura_no(aux->esq), avl_altura_no(aux->dir)) + 1;
-  
-  return aux;
 }
 
 /*=============GETTER============*/
@@ -393,21 +332,9 @@ uint avl_get_n(ARVORE *ar){
     return ar->n;
 }
 
-bool avl_get_op(ARVORE *ar){
+bool avl_get_tipo(ARVORE *ar){
     if(ar == NULL) return true; // Essa saída não influencia muito, por isso setamos que se o ponteiro é inválido, retorna-se que a árvore é de pares
-    return ar->op;
-}
-
-
-/*=============AUXILIAR============*/
-
-int avl_altura_no(NO* no){
-  if (no == NULL) return -1; 
-  return no->altura;
-}
-
-int avl_fb(NO* no){ 
-  return (avl_altura_no(no->esq) - avl_altura_no(no->dir));
+    return ar->tipo;
 }
 
 NO *avl_balanceia(NO* no){
@@ -435,14 +362,120 @@ NO *avl_balanceia(NO* no){
     return no;
 }
 
-int8 avl_compara_no(NO* no, char* nome, PAR par, bool op){
+
+/*=============ALOCAÇÃO E DESALOCAÇÃO DE NÓ============*/
+
+NO* avl_criar_no(char* nome, PAR par, bool tipo){ 
+  // Alocando NO
+  NO* no = (NO*)malloc(sizeof(NO));
+  if (no == NULL) return NULL; // Verificando se a alocação ocorreu corretamente
+
+  if (nome == NULL && !tipo){ // Se a árvore é ordenada por nome, não pode receber um nome nulo
+    free(no); // Evitando leak (esse nó não será adicionado na árvore já que não cumpre os critérios)
+    return NULL;
+  }
+  else if(nome != NULL){ // Tanto para tipo = false ou tipo = true, iremos copiar o nome para o nó se esse não for nulo
+    int tamanho = strlen(nome); // Consideramos que a string tem \0
+    no->nome = (char*)malloc(sizeof(char) * (tamanho+1)); // +1 para colocar o terminador
+    // Em caso de falha de alocação de espaço para o nome
+    if (no->nome == NULL){
+        free(no); // Evitando Leak
+        return NULL;
+    }
+    strcpy(no->nome, nome); // Copiando o nome para o campo alocado do nó
+  }
+  else{ // Esse else corresponde a: nome == NULL && tipo == true, nesse caso é possível colocar o campo como nulo (já que não será usado como chave)
+    no->nome = NULL;
+  }
+  
+
+  no->par = par;
+
+  // Inicialmente não tem filhos
+  no->dir = NULL;
+  no->esq = NULL;
+
+  no->frequencia = 1; //Inicia em 1, pois um nó com frequência 0 é deletado.
+  no->altura = 0; // O nó é uma folha
+
+  return no;
+}
+
+
+bool avl_apagar_no(NO** no){
+  if (no == NULL || *no == NULL) return false; // Verificando se os ponteiros são válidos
+
+  // Se o nome não for nulo, deve ser desalcado
+  if((*no)->nome != NULL){ 
+    free((*no)->nome);
+    (*no)->nome = NULL;
+  }
+  
+  // Desalocando nó e setando NULL para evitar acessos indevidos
+  free(*no); 
+  *no = NULL;
+  
+  return true;
+}
+
+
+/*=============BALANCEAMENTO============*/
+
+int avl_altura_no(NO* no){
+  if (no == NULL) return -1; 
+  return no->altura;
+}
+
+int avl_fb(NO* no){ 
+  return (avl_altura_no(no->esq) - avl_altura_no(no->dir));
+}
+
+NO* avl_rodar_e(NO* no){
+    NO* aux = no->dir;
+    no->dir = aux->esq;
+    aux->esq = no;
+
+    // Atualizando alturas.
+    no->altura = maior(avl_altura_no(no->esq), avl_altura_no(no->dir)) + 1; 
+    aux->altura = maior(avl_altura_no(aux->esq), avl_altura_no(aux->dir)) + 1;
+  
+    return aux;
+}
+
+NO* avl_rodar_d(NO* no){
+  NO* aux = no->esq;
+  no->esq = aux->dir;
+  aux->dir = no;
+  
+  no->altura = maior(avl_altura_no(no->esq), avl_altura_no(no->dir)) + 1; //Atualizando alturas
+  aux->altura = maior(avl_altura_no(aux->esq), avl_altura_no(aux->dir)) + 1;
+  
+  return aux;
+}
+
+
+/*=============OUTRAS============*/
+
+void avl_apagar_arvore_no(NO* no){
+    if (no == NULL) return; // Verificando ponteiro (se acabou a árvore -> caso base)
+
+    // Percurso em-ordem
+    avl_apagar_arvore_no(no->esq); // Esquerda
+    avl_apagar_arvore_no(no->dir); // Direita
+
+    avl_apagar_no(&no); // Apagando o atual
+
+    return;
+}
+
+int8 avl_compara_no(NO* no, char* nome, PAR par, bool tipo){
   if(no == NULL) return 0; // Para não tentar acessar o filho direito ou esquerdo
   
   // Retorn do strcmp
   int resp;
   
-  // op = false -> AVL de nomes
-  if(!op && nome != NULL && no->nome != NULL){
+  // tipo = false -> AVL de nomes
+  if(!tipo && nome != NULL && no->nome != NULL){
     
     resp = strcmp(no->nome, nome);
     
@@ -454,7 +487,7 @@ int8 avl_compara_no(NO* no, char* nome, PAR par, bool op){
     // Ambos são iguais
     else return 0;
   }
-  else if(op){
+  else if(tipo){
     // Maior é mais relevante
     if(no->par.maior > par.maior) return -1;
     if(no->par.maior < par.maior) return 1;
@@ -481,22 +514,23 @@ PAR avl_criar_par(int a, int b){
 
 /*=============TESTE============*/
 
-void avl_print_em_ordem_no(NO* no, bool op){
+void avl_print_em_ordem_no(NO* no, bool tipo){
   
   if (no == NULL) return;
   
-  if (no->esq != NULL) avl_print_em_ordem_no(no->esq, op);
-  if(!op) printf(" %s", no->nome);
+  if (no->esq != NULL) avl_print_em_ordem_no(no->esq, tipo);
+  if(!tipo) printf(" %s", no->nome);
   else printf(" (%d, %d)", no->par.maior, no->par.menor);
   printf(" - %d\n", no->frequencia);
-  if (no->dir != NULL) avl_print_em_ordem_no(no->dir, op);
+  if (no->dir != NULL) avl_print_em_ordem_no(no->dir, tipo);
   return;
 
 }
 
 void avl_print_em_ordem(ARVORE* ar){
   
-  avl_print_em_ordem_no(ar->raiz, ar->op);
+  avl_print_em_ordem_no(ar->raiz, ar->tipo);
   return;
   
 }
+

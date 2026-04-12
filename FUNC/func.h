@@ -12,16 +12,19 @@
     /* Realiza a funcionalidade [1] (CREATE TABLE) por meio de funções auxiliares. Inicializa valores e executa operações de entrada e saída. Acessível do arquivo main.c do projeto. */
     void func_create_interface();
 
-    bool func_select();
+    /**/
+    void func_select_interface();
 
     /* Realiza a funcionalidade [3] (SELECT FROM WHERE) por meio de funções auxiliares. Inicializa valores e executa operações de entrada e saída. Acessível do arquivo main.c do projeto. */
     void func_select_where_interface();    
     
-    bool func_delete_interface();
-    bool func_delete();
+    /**/
+    void func_delete_interface();
     
-    bool func_insert();
+    /**/
+    void func_insert_interface();
     
-    bool func_update();
+    /**/
+    void func_update_interface();
 
 #endif

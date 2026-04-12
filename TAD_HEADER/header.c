@@ -1,31 +1,35 @@
 #include "header.h"
 
+// Estrutura que representa o registro de cabeçalho
 struct header_{
-    char status; // Consistência do arquivo ('0' -> inconsistente; '1' -> consistente)
-    // -> padding de 3 bytes
-    int topo; // Byte offset do topo da pilha dos registros logicamente removidos (-1 no caso de pilha vazia)
+    char status; // Consistência do arquivo ('0' -> inconsistente; '1' -> consistente) 
+    int topo;  // Byte offset do topo da pilha dos registros logicamente removidos (-1 no caso de pilha vazia)
     int proxRRN; // Próximo RRN disponível para inserção de algum registro
     int nmr_estacoes; // Número de estações diferentes no arquivo (diferencia-se pelo nome)
-    int nmr_pares; // Número de pares (cod_estação, cod_prox_estação) diferentes no arquivo -- Não direcionado?????
-}; //Tamanho na memória primária é de 20 bytes
+    int nmr_pares_estacao; // Número de pares (cod_estação, cod_prox_estação) diferentes no arquivo 
+}; 
+
+// 20 bytes de tamanho -> padding entre o campo status e topo
 
 /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
-HEADER *header_create(){
-    HEADER *h = (HEADER*)malloc(sizeof(HEADER));
+HEADER *header_criar(){
+    HEADER *h = (HEADER*)malloc(sizeof(HEADER)); // Alocando memória
     
+    // Inicializando valores, se a alocação ocorreu corretamente
     if(h != NULL){
         h->status = '1'; // O arquivo incialmente está consistente
         h->topo = -1; // A pilha está vazia
-        h->proxRRN = h->nmr_estacoes = h->nmr_pares = 0; 
+        h->proxRRN = h->nmr_estacoes = h->nmr_pares_estacao = 0; 
     }
 
     return h;
 }
 
-bool header_delete(HEADER **h){
-    if(h == NULL || *h == NULL) return false; 
+bool header_apagar(HEADER **h){
+    if(h == NULL || *h == NULL) return false; // Verificando se o ponteiro é válido
 
+    // Desalocando e setando NULL
     free(*h);
     *h = NULL;
     
@@ -34,45 +38,43 @@ bool header_delete(HEADER **h){
 
 /*================LEITURA===============*/
 
-bool header_load_all(HEADER *h, FILE *f){
-    if(h == NULL || f == NULL) return false;
+bool header_carregar(HEADER *h, FILE *f){
+    if(h == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
 
-    // Movendo para o arquivo de cabeçalho
-    fseek(f, 0, SEEK_SET); 
+    fseek(f, 0, SEEK_SET); // Movendo para o arquivo de cabeçalho
     
-    fread(&(h->status), sizeof(h->status), 1, f); 
-    fread(&(h->topo), sizeof(h->topo), 1, f); 
-    fread(&(h->proxRRN), sizeof(h->proxRRN), 1, f); 
-    fread(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f); 
-    fread(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f);
+    // Carregando os campos separadamente para evitar problemas com o padding da estrutura 
+    fread(&(h->status), sizeof(h->status), 1, f); // Somente o status
+    fread(&(h->topo), sizeof(int)*4, 1, f); // O restante
 
     return true;
 }
 
-bool header_load_field(HEADER *h, int8 op, FILE *f){
-    if(h == NULL || f == NULL) return false;
+bool header_carregar_campo(HEADER *h, int8 op, FILE *f){
+    if(h == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
     
+    // Verificando se o campo é o primeiro
     if(op == STATUS){ 
-        // Status é o primeiro campo do arquivo
-        fseek(f, 0, SEEK_SET);
-        fread(&(h->status), sizeof(h->status), 1, f);
+        fseek(f, 0, SEEK_SET); // Movendo ponteiro para o registro de cabeçalho
+        fread(&(h->status), sizeof(h->status), 1, f); // Carregando um byte (status)
     }
+    // Se não for o primeiro campo, podemos usar uma fórmula para chegar no campo
     else{ 
-        // Status ocupa 1 byte e cada um dos restantes 4 byter
         fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto
-        if(op == TOP){
+        // Carregando campo correto
+        if(op == TOPO){
             fread(&(h->topo), sizeof(h->topo), 1, f);
         }
         else if(op == PROXRRN){
             fread(&(h->proxRRN), sizeof(h->proxRRN), 1, f);
         }
-        else if(op == EST){
+        else if(op == NMR_ESTACOES){
             fread(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f);
         }
-        else if(op == PARES){
-            fread(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f);
+        else if(op == NMR_PARES_ESTACAO){
+            fread(&(h->nmr_pares_estacao), sizeof(h->nmr_pares_estacao), 1, f);
         } 
-        else return false;
+        else return false; // Se não for um campo válido, retornamos false
     }
 
     return true;
@@ -81,44 +83,46 @@ bool header_load_field(HEADER *h, int8 op, FILE *f){
 
 /*================GRAVAÇÃO===============*/
 
-bool header_save_all(HEADER *h, FILE *f){
-    if(h == NULL || f == NULL) return false;
+bool header_salvar(HEADER *h, FILE *f){
+    if(h == NULL || f == NULL) return false; // Verificando se os ponteiro são inválidos
 
-    // Indo para início do arquivo
-    fseek(f, 0, SEEK_SET); 
-    
+    fseek(f, 0, SEEK_SET); // Indo para início do arquivo
+
     // Escrevendo campos (campo a campo como especificado)
     fwrite(&(h->status), sizeof(h->status), 1, f); 
     fwrite(&(h->topo), sizeof(h->topo), 1, f); 
     fwrite(&(h->proxRRN), sizeof(h->proxRRN), 1, f); 
     fwrite(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f); 
-    fwrite(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f); 
+    fwrite(&(h->nmr_pares_estacao), sizeof(h->nmr_pares_estacao), 1, f); 
 
     return true;
 }
 
-bool header_save_field(HEADER *h, int8 op, FILE *f){
-    if(h == NULL || f == NULL) return false;
+bool header_salvar_campo(HEADER *h, int8 op, FILE *f){
+    if(h == NULL || f == NULL) return false; // Verificando se os ponteiros são inválidos
 
+    // Verificando se é o primeiro campo
     if(op == STATUS){
         fseek(f, 0, SEEK_SET);
-        fwrite(&(h->status), sizeof(char), 1, f);
+        fwrite(&(h->status), sizeof(h->status), 1, f); // Escrevendo status na memória
     }
+    // Se não for o primeiro campo, podemos usar uma fórmula para chegar no campo
     else{
-        fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET);
-        if(op == TOP){
+        fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto
+        // Escrevendo campo desejado
+        if(op == TOPO){
             fwrite(&(h->topo), sizeof(h->topo), 1, f);
         }
         else if(op == PROXRRN){
             fwrite(&(h->proxRRN), sizeof(h->proxRRN), 1, f);
         }
-        else if(op == EST){
+        else if(op == NMR_ESTACOES){
             fwrite(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f);
         }
-        else if(op == PARES){
-            fwrite(&(h->nmr_pares), sizeof(h->nmr_pares), 1, f);
+        else if(op == NMR_PARES_ESTACAO){
+            fwrite(&(h->nmr_pares_estacao), sizeof(h->nmr_pares_estacao), 1, f);
         } 
-        else return false;
+        else return false; // Se o campo for inválido
     }
 
     return true;
@@ -127,39 +131,40 @@ bool header_save_field(HEADER *h, int8 op, FILE *f){
 /*===============GETTERS===============*/
 
 char header_get_status(HEADER *h){
-    if(h != NULL) return h->status;
+    if(h != NULL) return h->status; // Se o ponteiro não for inválido, retornarmos o campo
 
-    return '0';
+    return '0'; // Retornando inconsistente, já que o ponteiro está falho
 }
 
 int header_get_topo(HEADER *h){
-    if(h != NULL) return h->topo;
+    if(h != NULL) return h->topo; // Se o ponteiro não for inválido, retornarmos o campo
 
-    return -1;
+    return -1; // Retornando pilha vazia
 }
 
 int header_get_proxRRN(HEADER *h){
-    if(h != NULL) return h->proxRRN;
+    if(h != NULL) return h->proxRRN; // Se o ponteiro não for inválido, retornarmos o campo
 
-    return -1;
+    return -1; // Retornando valor impossível para sinalizar que o ponteiro está falho 
 }
 
 int header_get_nmr_estacoes(HEADER *h){
-    if(h != NULL) return h->nmr_estacoes;
+    if(h != NULL) return h->nmr_estacoes; // Se o ponteiro não for inválido, retornarmos o campo
 
-    return -1;
+    return -1; // Retornando valor impossível para sinalizar que o ponteiro está falho 
 }
 
-int header_get_nmr_pares(HEADER *h){
-    if(h != NULL) return h->nmr_pares;
+int header_get_nmr_pares_estacao(HEADER *h){
+    if(h != NULL) return h->nmr_pares_estacao; // Se o ponteiro não for inválido, retornarmos o campo
 
-    return -1;
+    return -1; // Retornando valor impossível para sinalizar que o ponteiro está falho 
 }
 
 /*===============SETTERS===============*/
 
 bool header_set_status(HEADER *h, char status){
-    if(h != NULL && (status == '0' || status == '1')){
+    // Se o ponteiro é válido e o valor do campo possível, atribuimos
+    if(h != NULL && (status == '0' || status == '1')){ 
         h->status = status;
         return true;
     }
@@ -168,6 +173,7 @@ bool header_set_status(HEADER *h, char status){
 }
 
 bool header_set_topo(HEADER *h, int topo){
+    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
     if(h != NULL && topo >= -1){
         h->topo = topo;
         return true;
@@ -177,6 +183,7 @@ bool header_set_topo(HEADER *h, int topo){
 }
 
 bool header_set_proxRRN(HEADER *h, int proxRRN){
+    // Se o ponteiro é válido e o valor do campo possível, atribuimos
     if(h != NULL && proxRRN >= 0){
         h->proxRRN = proxRRN;
         return true;
@@ -186,6 +193,7 @@ bool header_set_proxRRN(HEADER *h, int proxRRN){
 }
 
 bool header_set_nmr_estacoes(HEADER *h, int nmr_estacoes){
+    // Se o ponteiro é válido e o valor do campo possível, atribuimos
     if(h != NULL && nmr_estacoes >= 0){
         h->nmr_estacoes = nmr_estacoes;
         return true;
@@ -194,35 +202,12 @@ bool header_set_nmr_estacoes(HEADER *h, int nmr_estacoes){
     return false;
 }
 
-bool header_set_nmr_pares(HEADER *h, int nmr_pares){
-    if(h != NULL && nmr_pares >= 0){
-        h->nmr_pares = nmr_pares;
+bool header_set_nmr_pares_estacao(HEADER *h, int nmr_pares_estacao){
+    // Se o ponteiro é válido e o valor do campo possível, atribuimos
+    if(h != NULL && nmr_pares_estacao >= 0){
+        h->nmr_pares_estacao = nmr_pares_estacao;
         return true;
     }
 
     return false;
 }
-
-
-/*===========TESTE==========*/
-
-void header_print(HEADER *h){
-    if(h == NULL) return;
-
-    printf("STATUS: %c\n", h->status);
-    printf("TOPO: %d\n", h->topo);
-    printf("PROX RRN: %d\n", h->proxRRN);
-    printf("NÚMERO DE ESTAÇÕS: %d\n", h->nmr_estacoes);
-    printf("NÚMERO DE PARES: %d\n\n", h->nmr_pares);
-}
-
-void header_set_all(HEADER *h, char status, int topo, int proxRRN, int nmr_estacoes, int nmr_pares){
-    if(h == NULL) return;
-
-    h->status = status;
-    h->topo = topo;
-    h->proxRRN = proxRRN;
-    h->nmr_estacoes = nmr_estacoes;
-    h->nmr_pares = nmr_pares;
-}
-

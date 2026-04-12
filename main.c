@@ -13,19 +13,19 @@ int main(){
             func_create_interface();
             break;
         case 2:
-            func_select();
+            func_select_interface();
             break;
         case 3:
             func_select_where_interface();
             break;
         case 4:
-            func_delete();
+            func_delete_interface();
             break;
         case 5:
-            func_insert();
+            func_insert_interface();
             break;
         case 6:
-            func_update();
+            func_update_interface();
             break;
         default:
             printf("Opção inválida.\n");

@@ -1,92 +1,117 @@
 #include "../CONTEXTO/contexto.h"
 
-bool func_update(){
-  // Verifica se a função foi executada corretamente
-  bool ok = true;
-  // Consideramos que o nome do arquivo não será maior que 30 bytes
-  char nome_arq[TAM_BUFFER];
+/*=============FUNÇÕES OCULTAS============*/
+
+/* Percorre os registros de dados do arquivo e atualiza os campos especificados com os valores dados dos registros que correspondem aos outros valores dados dos campos determinados. 
+  - Recebe uma estrutura que indica os campos usados como critério, outra estrutura dessas que indica quais campos serão alterados, um ponteiro para estrutura que representa um registro de dados para percorrer o arquivo, um outro ponteiro para estrutura desse tipo com os valores de critério dos campos, um outro ponteiro para estrutura desse tipo com os valores novos dos campos e um ponteiro para o arquivo. 
+  - Retorno */
+bool func_update(FLAG_FIELD flag_filtro, FLAG_FIELD flag_carimbo, DATA *d, DATA *filtro, DATA *carimbo, FILE *f);
+
+
+/*=============INTERFACE============*/
+
+void func_update_interface(){
+  bool ok = true; // Verifica se a função foi executada corretamente
+  char nome_arq[TAM_BUFFER]; // Consideramos que o nome do arquivo não será maior que TAM_BUFFER-1
+  
   // Lendo o nome do arquivo de entrada
   scanf(" %30s", nome_arq);
   // Ponteiro para o arquivo de entrada
   FILE* f = fopen(nome_arq, "rb+"); //Abre o arquivo no modo de leitura e escritura binário.
   if(f == NULL) ok = false;
   
-  HEADER* h; //Registro de cabeçalho.
-  DATA *d, *filtro, *carimbo; //Registro de dados, registro auxiliar para realizar a busca do usuário e registro auxiliar para guardar os valores que o usuário quer substitutuir.
+  HEADER* h; // Registro de cabeçalho.
+  DATA *d, *filtro, *carimbo; // Registro de dados, registro auxiliar para realizar a busca do usuário e registro auxiliar para guardar os valores que o usuário quer substitutuir.
 
-  filtro = data_create();
-  if(filtro == NULL) ok = false;
-  carimbo = data_create();
-  if(carimbo == NULL) ok = false;
-  ok = ok && func_inicializar(&h, &d);
+  // Alocações
+  filtro = data_criar();
+  carimbo = data_criar();
+  if(filtro == false || carimbo == NULL) ok = false;
+
+  ok = ok && cntx_inicializar(&h, &d);
   
+  // Checando a consistência do arquivo
+  if(f != NULL && h != NULL){ // Verificando se as condições para isso é possível
+    header_carregar_campo(h, STATUS, f); // Vamos precisar só desse campo
+    ok = ok && cntx_checa_consistencia(h, false, NULL); // Checando consistência já carregada
+  }
 
+  // Inicialização da funcionalidade finalizada!
   if(ok){
-    // Carregando o cabeçalho
-    header_load_all(h, f);
-    // Inicialização da funcionalidade finalizada!
-    header_set_status(h, '0'); // Arquivo foi aberto para escrita e seu status deve ser atualizado.
-    header_save_field(h, STATUS, f); // Salva a mudança no registro de cabeçalho.
+    cntx_altera_consistencia(h, INCONSISTENTE, f);
     
-    FLAG_FIELD flag_filtro, flag_carimbo; //Marcam quais campos possuem filtros ativos para a busca e quais campos serão alterados.
-    ok = func_init_flag_field(&flag_filtro);
+    FLAG_FIELD flag_filtro, flag_carimbo; // Marcam quais campos possuem filtros ativos para a busca e quais campos serão alterados.
   
-    uint proxRRN = header_get_proxRRN(h);  // Demarca até qual registro existe.
-    char* nomeest; // Variável auxiliar para receber data_get_nome_est().
     uint n; // Guarda a quantidade de alterações a serem feitas.
     uint m; // Guarda a quantidade de campos que serão usados para a busca
     uint p; // Guarda a quantidade de campos que serão alterados
-    char campo[TAM_BUFFER]; // Guarda nomes de campos do registro. Os maiores nomes de campo possuem 15 caracteres + '/0', portanto tamanho 16.
-    char valor[TAM_BUFFER]; //Guarda valores que podem estar salvos em campos de registro.
-    scanf("%d", &n);
+    
+    scanf("%d", &n); // Lendo a quantidade de updates
   
+    // Para cada update iremos percorrer o arquivo
     for(int i = 0; i < n; i++){
     
       // Inicializando todos campos com false
-      func_init_flag_field(&flag_filtro); 
-      func_init_flag_field(&flag_carimbo); 
+      cntx_init_flag(&flag_filtro); 
+      cntx_init_flag(&flag_carimbo); 
       
       // Lendo critérios de seleção
       scanf("%d", &m);
-      func_where_input(&flag_filtro, filtro, m);
+
+      ok = cntx_where_input(&flag_filtro, filtro, m);
       
       // Lendo valores a serem atualizados
       scanf("%d", &p);
-      func_where_input(&flag_carimbo, carimbo, p);
+      ok = ok && cntx_where_input(&flag_carimbo, carimbo, p);
       
-      for(uint j = 0; j < proxRRN; j++){
-
-        data_load_all(d, j, f);
-
-        if (feof(f)) break; //Checa por END OF FILE depois de ler do arquivo.
-        
-        if (data_get_removido(d) != '1'){ //Pula registros removidos
-          if (func_where_compare(flag_filtro, d, filtro)){ //Se encontrar um registro que se encaixa no filtro, inicia a lógica de alteração.
-                
-            func_copy_data(&flag_carimbo, d, carimbo); //Copia todos os campos em "carimbo" marcados na flag em "d" 
-            data_save_all(d, j, f); //Salva as alterações do registro no arquivo.
-
-            // Não precisamos verificar o número de estações e pares, segundo as orientações dos monitores
-            
-          }
-        }
-      }
+      if(ok) func_update(flag_filtro, flag_carimbo, d, filtro, carimbo, f); // Percorrendo o arquivo e atualizando os registros que passarem no teste
+      
     }
   }
   
-  header_set_status(h, '1'); //Atualiza o status do arquivo, agora que foi regularizado novamente.
-  header_save_field(h, STATUS, f); //Salva apenas os campos que haviam possibilidade de alteração.
+  // Atualizando o cabeçalho
+  header_set_status(h, CONSISTENTE); // Atualiza o status do arquivo, agora que foi regularizado novamente.
+  header_salvar_campo(h, STATUS, f); // Salva apenas os campos que haviam possibilidade de alteração.
 
   if(f != NULL) fclose(f), f = NULL; //Fecha o arquivo e salva as alterações.
   
   //Desaloca todas as estruturas (verificações internas)
-  data_delete(&d);
-  data_delete(&filtro);
-  data_delete(&carimbo);
-  header_delete(&h);
+  data_apagar(&d);
+  data_apagar(&filtro);
+  data_apagar(&carimbo);
+  header_apagar(&h);
+
   //"flags_filtro" e "flags_carimbo" não precisam ser apagadas porque são structs estáticas, não dinâmica.
   
   if(ok) BinarioNaTela(nome_arq); //Execução da funcionalidade foi terminada.
   else printf("Falha no processamento do arquivo.\n");
+}
+
+
+/*=============PRINCIPAL============*/
+
+bool func_update(FLAG_FIELD flag_filtro, FLAG_FIELD flag_carimbo, DATA *d, DATA *filtro, DATA *carimbo, FILE *f){
+  bool ok = true; // Verifica se a execução ocorreu corretamente 
+  uint RRN = 0; // Guarda o RRN do registro atual
+
+  while(ok){
+    data_carregar(d, RRN, f); // Lendo o registro atual
+
+    if (feof(f)) break; // Checa por END OF FILE depois de ler do arquivo.
+    
+    if (data_get_removido(d) != '1'){ // Pula registros removidos
+      if (cntx_where_compare(flag_filtro, d, filtro)){ // Se encontrar um registro que se encaixa no filtro, inicia a lógica de alteração.
+        
+        ok = cntx_copiar_data(&flag_carimbo, d, carimbo); //Copia todos os campos em "carimbo" marcados na flag em "d" 
+        if(ok) data_salvar(d, RRN, f); //Salva as alterações do registro no arquivo.
+
+        // Não precisamos verificar o número de estações e pares, segundo as orientações dos monitores; mas se precisamos seria algo similar ao delete
+        
+      }
+    }
+
+    RRN++; // Passando para o próximo registro
+  }
+  
   return ok;
 }

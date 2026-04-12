@@ -1,115 +1,134 @@
 #include "../CONTEXTO/contexto.h"
 
-bool func_delete(){
-  // Verifica se a funcionalidade foi executada com sucesso
-  bool ok = true;
-  // Consideramos que o nome do arquivo não será maior que 30 bytes
-  char nome_arq[TAM_BUFFER];
+/*=============FUNÇÕES OCULTAS============*/
 
-  HEADER* h; //Registro de cabeçalho.
-  DATA *d, *filtro; //Registro de dados e registro auxiliar para realizar a busca do usuário.
-  ARVORE *ar_nomes, *ar_pares; //Árvores que irão guardar quantas estações e pares de códigos de estação diferentes existem no registro de dados, respectivamente.
+/* Percorre um arquivo comparando os campos do seu registro campos com os critérios passados; se passar nos critérios, remove logicamente aquele registro
+  - Recebe uma estrutura de flags que indica os campos a ser comparados, um ponteiro para a estrutura que representa um registro de dados para percorrer o arquivo, outro registro desse tipo que tem os valores de critério, um ponteiro para a estrutura que representa o registro de cabeçalho para devidas manipulações, dois ponteiros para árvore (uma ordenada pelo nome, outra ordenada por pares), uma flag que indica se é para instanciar a árvore e um ponteiro para arquivo*/
+void func_delete(FLAG_FIELD flags, DATA *d, DATA *filtro, HEADER *h, ARVORE* ar_nomes, ARVORE* ar_pares, bool primeira, FILE *f);
+
+/*=============INTERFACE============*/
+
+void func_delete_interface(){
+  bool ok = true; // Verifica se a funcionalidade foi executada com sucesso
+  char nome_arq[TAM_BUFFER]; // Consideramos que o nome do arquivo não será maior que TAM_BUFFER
+
+  HEADER* h; // Registro de cabeçalho.
+  DATA *d, *filtro; // Registro de dados e registro auxiliar para realizar a busca do usuário.
+  ARVORE *ar_nomes, *ar_pares; // Árvores que irão guardar quantas estações e pares de códigos de estação diferentes existem no registro de dados, respectivamente.
 
   // Lendo o nome do arquivo de entrada
   scanf(" %30s", nome_arq);
   // Ponteiro para o arquivo de entrada
-  FILE* f = fopen(nome_arq, "rb+"); //Abre o arquivo no modo de leitura e escritura binário.
-  if(f == NULL) ok = false;
+  FILE* f = fopen(nome_arq, "rb+"); // Abre o arquivo no modo de leitura e escritura binário.
+  if(f == NULL) ok = false; // Verificando alocação
 
-  filtro = data_create();
-  ok = ok && func_inicializar(&h, &d);
-  
-  //func_inicializar_arvores(&ar_nomes, &ar_pares, h, d, f);
+  // Alocações
+  filtro = data_criar();
   ar_nomes = avl_criar_arvore(false);
-  if(ar_nomes == NULL) ok = false;
-
   ar_pares = avl_criar_arvore(true);
-  if(ar_pares == NULL) ok = false;
-  
-  //Inicialização da funcionalidade finalizada!
-  if(ok){
-    header_load_all(h, f);
+  if(filtro == NULL || ar_nomes == NULL || ar_pares == NULL) ok = false;
 
-    header_set_status(h, '0'); //Arquivo foi aberto para escrita e seu status deve ser atualizado.
-    header_save_field(h, STATUS, f); //Salva a mudança no registro de cabeçalho.
+  ok = ok && cntx_inicializar(&h, &d);
+  
+  // Verificando consistência
+  if(f != NULL && h != NULL){ // É possível verificar a consistência do arquivo
+    header_carregar(h, f);
+    ok = ok && cntx_checa_consistencia(h, false, NULL); // O campo status já está na estrutura
+  }
+
+  //Inicialização da funcionalidade finalizada!
+  if(ok){ // Checando consistência
+    cntx_altera_consistencia(h, INCONSISTENTE, f); // Mudando o status do arquivo para inconsistente
     
-    
-    FLAG_FIELD flags; //Marca quais campos possuem filtros ativos.
-    func_init_flag_field(&flags);
-    
-    uint proxRRN = header_get_proxRRN(h); // Demarca até qual registro existe.
-    char* nomeest; //Variável auxiliar para receber data_get_nome_est().
+    FLAG_FIELD flags; //Marca quais campos possuem filtros ativos. 
     uint n; //Guarda a quantidade de remoções a serem feitas.
     uint m; //Guarda a quantidade de filtros que serão adicionados.
     char campo[TAM_BUFFER]; //Guarda o campo a ser procurado para remoção. Os maiores nomes de campo possuem 15 caracteres + '/0', portanto tamanho 16.
     char valor[TAM_BUFFER]; //Guarda o valor que será procurado no registro de dados.
-    bool primeira = true;
-    scanf("%d", &n);
+    bool primeira = true; // Checa se a primeira passagem pelo arquivo (para criar as árvore)
+   
+    scanf("%d", &n); // Lendo quantidade de remoções
     
+    // Para cada remoção, vamos ler os critérios e percorrer o arquivo
     for(int i = 0; i < n && ok; i++){
     
-      scanf("%d", &m);
+      scanf("%d", &m); // Lendo quantidade de campos do filtro
+      cntx_init_flag(&flags); // Inicializando todos campos com false
 
-      func_init_flag_field(&flags);
-
-      ok = func_where_input(&flags, filtro, m);
-
-      for(uint j = 0; j < proxRRN && ok; j++){
-        data_load_all(d, j, f);
-
-        if (feof(f)) break; //Checa por END OF FILE depois de ler do arquivo.
-
-        if (data_get_removido(d) != '1'){ //Pula registros removidos
-          if(primeira){
-            nomeest = data_get_nome_est(d);
-            avl_inserir(ar_nomes, nomeest, 0, 0);
-            free(nomeest); nomeest = NULL;
-            if(data_get_cod_prox(d) != -1) 
-              avl_inserir(ar_pares, NULL, data_get_cod_est(d), data_get_cod_prox(d));
-          }
-
-
-          if (func_where_compare(flags, d, filtro)){ //Se encontrar um registro que se encaixa no filtro, o remove logicamente
-            data_set_removido(d, '1'); //Marca seu registro como logicamente removido.
-            data_set_prox(d, header_get_topo(h)); //Salva o último valor do topo em "próximo".
-            header_set_topo(h, j); //Empilha o registro no cabeçalho.
-            
-            //Salva apenas os campos que foram alterados.
-            data_save_field(d, j, REMOVIDO, f);
-            data_save_field(d, j, PROX, f);
-            //O header é capaz de mudar mais vezes, portanto é salvo fora do laço.
-
-            // Removendo da árvore
-            nomeest = data_get_nome_est(d);
-            avl_remover(ar_nomes, nomeest, 0, 0);
-            free(nomeest); nomeest = NULL;
-            avl_remover(ar_pares, NULL, data_get_cod_est(d), data_get_cod_prox(d));
-          }
-        }
-      }
-      primeira = false;
+      ok = cntx_where_input(&flags, filtro, m); // Recebendo os valores do filtro
+      if(ok) func_delete(flags, d, filtro, h, ar_nomes, ar_pares, primeira, f);
+      
+      primeira = false; // Passou da primeira
     }
   
     // Setando os números de estações e pares a partir da AVL
     header_set_nmr_estacoes(h, avl_get_n(ar_nomes));
-    header_set_nmr_pares(h, avl_get_n(ar_pares)); 
-    header_set_status(h, '1'); //Atualiza o status do arquivo, agora que foi regularizado novamente
+    header_set_nmr_pares_estacao(h, avl_get_n(ar_pares)); 
+    header_set_status(h, CONSISTENTE); // Atualiza o status do arquivo, agora que foi regularizado novamente
 
-    //Salva o header
-    header_save_all(h, f);
+    //Salvando o cabeçalho
+    header_salvar(h, f);
   }
-  if(f != NULL) fclose(f), f = NULL; //Salva o arquivo
+
+  if(f != NULL) fclose(f), f = NULL; // Salva o arquivo
   
   // Desalocando estruturas
   avl_apagar_arvore(&ar_nomes);
   avl_apagar_arvore(&ar_pares);
-  data_delete(&d);
-  data_delete(&filtro);
-  header_delete(&h);
+  data_apagar(&d);
+  data_apagar(&filtro);
+  header_apagar(&h);
   //"flags" não precisa ser apagada porque é uma struct estática, não dinâmica.
-  
+
+  // Imprimindo resultado
   if(ok) BinarioNaTela(nome_arq);
   else printf("Falha no processamento do arquivo.\n");
-  
-  return true;
+}
+
+
+/*=============PRINCIPAL============*/
+
+void func_delete(FLAG_FIELD flags, DATA *d, DATA *filtro, HEADER *h, ARVORE* ar_nomes, ARVORE* ar_pares, bool primeira, FILE *f){
+  uint proxRRN = header_get_proxRRN(h); // Demarca o fim do arquivo
+  char* nome_estacao; // Variável auxiliar para receber data_get_nome_est()
+
+  for(uint RRN = 0; RRN < proxRRN; RRN++){
+        data_carregar(d, RRN, f); // Carregando o registro atual
+
+        if (feof(f)) break; //Checa por END OF FILE depois de ler do arquivo.
+
+        if (data_get_removido(d) != '1'){ // Pula registros removidos
+
+          // Se encontrar um registro que se encaixa no filtro, o remove logicamente
+          if (cntx_where_compare(flags, d, filtro)){ 
+            data_set_removido(d, '1'); // Marca seu registro como logicamente removido.
+            data_set_proximo(d, header_get_topo(h)); // Salva o último valor do topo em "próximo".
+            header_set_topo(h, RRN); // Empilha o registro no cabeçalho.
+            
+            //Salva apenas os campos que foram alterados.
+            data_salvar_campo(d, RRN, REMOVIDO, f);
+            data_salvar_campo(d, RRN, PROXIMO, f);
+            
+            //O header é capaz de mudar mais vezes, portanto é salvo fora do laço.
+
+            // Removendo da árvore (Se não for a primeira vez não precisamos verificar se o nó está)
+            if(!primeira){
+              nome_estacao = data_get_nome_estacao(d); // Pegando o nome do registro
+              avl_remover(ar_nomes, nome_estacao, 0, 0); // Removendo o nome
+              free(nome_estacao); nome_estacao = NULL; // Desalocando
+              if(data_get_cod_prox_estacao(d) != -1) // Pares com nulo não são colocados na árvore
+                avl_remover(ar_pares, NULL, data_get_cod_estacao(d), data_get_cod_prox_estacao(d)); // Removendo o par
+            }
+          }
+
+          // Se for a primeira, adicionamos os nós que não foram removidos
+          else if(primeira){ 
+            nome_estacao = data_get_nome_estacao(d); // Pegando o nome do registro 
+            avl_inserir(ar_nomes, nome_estacao, 0, 0); // Inserindo na AVL de nomes
+            free(nome_estacao); nome_estacao = NULL; // O nome é copiado para o nó, podemos desalocar
+            if(data_get_cod_prox_estacao(d) != -1) // Par (cod_estacao, NULL) não é válido para colocar na AVL 
+              avl_inserir(ar_pares, NULL, data_get_cod_estacao(d), data_get_cod_prox_estacao(d)); // Inserindo na AVL de pares numéricos
+          }
+        }
+      }
 }

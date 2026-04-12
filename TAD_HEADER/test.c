@@ -4,7 +4,7 @@
 
 int main(){
     int op;
-    HEADER *h = header_create();
+    HEADER *h = header_criar();
     FILE *f = fopen("arq.bin", "rb+");
 
     printf(" [1] LER\n [2] ESCREVER\nSelecione: ");
@@ -12,17 +12,17 @@ int main(){
 
     if(f != NULL){
         if(op == 1){
-            header_load_all(h, f);
-            //header_load_field(h, STATUS, f);
-            //header_load_field(h, TOP, f);
-            //header_load_field(h, PROXRRN, f);
-            //header_load_field(h, EST, f);
-            //header_load_field(h, PARES, f);
+            header_carregar(h, f);
+            //header_carregar_campo(h, STATUS, f);
+            //header_carregar_campo(h, TOPO, f);
+            //header_carregar_campo(h, PROXRRN, f);
+            //header_carregar_campo(h, NMR_ESTACOES, f);
+            //header_carregar_campo(h, NMR_PARES_ESTACAO, f);
             printf("status: %c\n", header_get_status(h));
             printf("topo: %d\n", header_get_topo(h));
             printf("proxRRN: %d\n", header_get_proxRRN(h));
             printf("nmr de estações: %d\n", header_get_nmr_estacoes(h));
-            printf("nmr de pares: %d\n", header_get_nmr_pares(h));
+            printf("nmr de pares: %d\n", header_get_nmr_pares_estacao(h));
         }
         else if(op == 2){
             int aux;
@@ -30,20 +30,17 @@ int main(){
             printf("topo: "); scanf("%d", &aux); header_set_topo(h, aux);
             printf("prox RRN: "); scanf("%d", &aux); header_set_proxRRN(h, aux);
             printf("nmr de estações: "); scanf("%d", &aux); header_set_nmr_estacoes(h, aux);
-            printf("nmr de pares: "); scanf("%d", &aux); header_set_nmr_pares(h, aux);
-            header_save_all(h, f);
-            //header_save_field(h, STATUS, f);
-            //header_save_field(h, TOP, f);
-            //header_save_field(h, PROXRRN, f);
-            //header_save_field(h, EST, f);
-            //header_save_field(h, PARES, f);
+            printf("nmr de pares: "); scanf("%d", &aux); header_set_nmr_pares_estacao(h, aux);
+            header_salvar(h, f);
+            //header_salvar_campo(h, STATUS, f);
+            //header_salvar_campo(h, TOPO, f);
+            //header_salvar_campo(h, PROXRRN, f);
+            //header_salvar_campo(h, NMR_ESTACOES, f);
+            //header_salvar_campo(h, NMR_PARES_ESTACAO, f);
         }
     }
 
-    printf("\n");
-    header_print(h);
-
-    header_delete(&h);
+    header_apagar(&h);
     if(h == NULL) printf("ok\n");
     
     return 0;

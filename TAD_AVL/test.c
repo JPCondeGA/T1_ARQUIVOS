@@ -11,14 +11,12 @@ int main(){
     do{
         printf("Opções:\n [1] INSERIR\n [2] REMOVER\nSelecione: "); scanf("%d", &op2);
         
-        if(!avl_get_op(ar)){
-            printf("NOME: "); 
-            scanf(" %30[^\n]", nome);    
-        }
-        else{
-            printf("COD ESTACAO: "); scanf("%d", &cod_estacao);
-            printf("COD PROX ESTACAO: "); scanf("%d", &cod_prox_estacao);
-        }    
+        
+        printf("NOME: "); 
+        scanf(" %30[^\n]", nome);
+        printf("COD ESTACAO: "); scanf("%d", &cod_estacao);
+        printf("COD PROX ESTACAO: "); scanf("%d", &cod_prox_estacao); 
+        
         if(op2 == 1){
             avl_inserir(ar, nome, cod_estacao, cod_prox_estacao);
         }
