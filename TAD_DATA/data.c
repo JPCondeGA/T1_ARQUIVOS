@@ -13,15 +13,15 @@ struct data_{
     int cod_linha; // Código da linha
     int cod_prox_estacao; // Código da próxima estação
     int dist_prox_estacao; // Distância para a próxima estação
-    int cod_linha_integra; // Códiga da linha que faz a integração entre as linhas
+    int cod_linha_integra; // Código da linha que faz a integração entre as linhas
     int cod_est_integra; // Código da estação que faz a integração entre as linhas
-    uint tam_nome_estacao; // Inidicador de tamanho (quantidade de caracteres) do nome da estação
+    uint tam_nome_estacao; // Indicador de tamanho (quantidade de caracteres) do nome da estação
     char* nome_estacao; // Nome da estação
-    uint tam_nome_linha; // Inidicador de tamanho (quantidade de caracteres) do nome da linha
+    uint tam_nome_linha; // Indicador de tamanho (quantidade de caracteres) do nome da linha
     char* nome_linha; // Nome da linha
 }; 
 
-// 64 bytes de tamanho -> padding entre removido e proximo, tam_nome_estacao e nome_estacao, e tam_nome_linha e nome_linha
+// 64 bytes de tamanho -> há padding entre removido e proximo, tam_nome_estacao e nome_estacao, e tam_nome_linha e nome_linha
 
 
 /*=============FUNÇÕES OCULTAS============*/
@@ -29,10 +29,10 @@ struct data_{
 /* Preenche um registro de dados com lixo (caractere '$') de um byte do registro até seu fim.
 - Recebe o RRN do registro que está sendo preenchido, o byte-offset do primeiro byte a ser preenchido preenchimento e o arquivo em que está o registro de dados. 
 
-Passe corretamente o byte_off para evitar sobreescritas incorretas. Essa função não move o cursor do arquivo (é para ser usada com o cursor já na posição correta). */
+Passe corretamente o byte_offset para evitar sobrescritas incorretas. Essa função não move o cursor do arquivo (é para ser usada com o cursor já na posição correta). */
 void data_preencher_lixo(uint RRN, uint byte_off, FILE *f);
 
-/* Calcula o byte-offset do primeiro byte do registro de dados com RRN esepecífico.
+/* Calcula o byte-offset do primeiro byte do registro de dados com RRN específico.
 - Recebe o RRN do registro.
 - Retorna o byte-offset. */
 ull data_byte_offset(uint RRN);
@@ -64,7 +64,7 @@ bool data_apagar(DATA **d){
     if((*d)->nome_linha != NULL) free((*d)->nome_linha), (*d)->nome_linha = NULL; // Desalocando nome da linha , se houver
 
     free(*d); // Desalocando
-    *d = NULL; // Setando o ponteiro para NULL
+    *d = NULL; // Reatribuindo o ponteiro para NULL
 
     return true;
 }
@@ -92,7 +92,7 @@ bool data_carregar(DATA *d, uint RRN, FILE *f){
         d->nome_estacao[d->tam_nome_estacao] = '\0'; // Concatenando com o terminador
     }
 
-    else d->nome_estacao = NULL; // Para não ter acesso indevido
+    else d->nome_estacao = NULL; // Evitando acesso indevido caso o nome seja nulo
 
     fread(&(d->tam_nome_linha), sizeof(d->tam_nome_linha), 1, f); // Lendo o tamanho do nome da linha
 
@@ -104,7 +104,7 @@ bool data_carregar(DATA *d, uint RRN, FILE *f){
         d->nome_linha[d->tam_nome_linha] = '\0'; // Concatenando com o terminador
     }
 
-    else d->nome_linha = NULL; // Para não ter acesso indevido
+    else d->nome_linha = NULL; // Evitando acesso indevido caso o nome seja nulo
 
     return true;
 }
@@ -171,14 +171,14 @@ bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f){
                 d->nome_estacao[d->tam_nome_estacao] = '\0';  // Concatenando com o terminador
             }
 
-            else d->nome_estacao = NULL; // Para não ter acesso indevido
+            else d->nome_estacao = NULL; // Evitando acesso indevido
             
             break;
             
         case NOME_LINHA:
             uint tam_nome_estacao; // Tamanho do nome da estação (se necessário) para saltá-lo na leitura
             
-            // Lendo tamanho do nome da estação (precisamos dessa informação para ir para a byte correto e ler o nome da linha)
+            // Lendo tamanho do nome da estação (precisamos dessa informação para ir para o byte correto e ler o nome da linha)
             fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET); // Movendo cursor para o campo
             fread(&tam_nome_estacao, sizeof(d->tam_nome_estacao), 1, f); 
 
@@ -195,12 +195,12 @@ bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f){
                 d->nome_linha[d->tam_nome_linha] = '\0'; // Concatenando com o terminador
             }
 
-            else d->nome_linha = NULL; // Para evitar acesso indevido
+            else d->nome_linha = NULL; // Evitando acesso indevido
 
             break;
 
         default:
-            return false; // Em caso se campo passado inválido
+            return false; // Caso o campo passado seja inválido
     }
         
     return true;
@@ -289,7 +289,7 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             // Se o nome da estação a ser gravado for maior ou menor do que o que está armazenado, precisamos arrumar a posição dos campos posteriores
             
             // Inicializnado auxiliar
-            DATA *aux = data_criar(); // Para não perder nenhum dado armazenado na struct d, criamos uma auxiliar que carregará os campos posteriores
+            DATA *aux = data_criar(); // Para não perder nenhum dado armazenado na struct data, criamos uma auxiliar que carregará os campos posteriores
             if(aux == NULL) return false; // Se a alocação falhou
             data_carregar_campo(aux, RRN, NOME_LINHA, f); // Carregando o nome da linha e o tamanho do nome da linha
             
@@ -303,7 +303,7 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             if(aux->nome_linha != NULL) fwrite(aux->nome_linha, sizeof(char), aux->tam_nome_linha, f); // Escrevendo o nome da linha, se houver nome
             data_apagar(&aux); // Desalocando a estrutura auxiliar
             
-            // Preechendo o restante com lixo
+            // Preenchendo o restante com lixo
             uint byte_registro_1 = TAM_FIXO + sizeof(d->tam_nome_linha) + d->tam_nome_estacao + d->tam_nome_linha+1; // Calculando o byte-offset (em relação ao primeiro byte-offset) em que estamos
             data_preencher_lixo(RRN, byte_registro_1, f);
 
@@ -330,7 +330,7 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             break;
 
         default:
-            return false; // Em caso se campo passado inválido
+            return false; // Caso o campo passado seja inválido
     }
 
     return true;    
@@ -339,62 +339,62 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
 /*==============GETTERS=============*/
 
 char data_get_removido(DATA *d){
-    if(d != NULL) return d->removido; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->removido; // Retornando o campo caso o ponteiro não seja inválido
 
-    return '1'; // Se o ponteiro é inválido, é melhor dizer que está removido, para que não seja acessado outros campos
+    return '1'; // Se o ponteiro é inválido, é uma estratégia melhor retornar que está removido para evitar acessos indevidos
 }
 
 int data_get_proximo(DATA *d){
-    if(d != NULL) return d->proximo; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->proximo; // Retornando o campo caso o ponteiro não seja inválido
 
-    return -1; // Se o ponteiro é inválido, retornando que não há próximo na pilha para evitar acessos indevidos
+    return -1; // Se o ponteiro é inválido, é uma estratégia melhor retornar que não há próximo na pilha para evitar acessos indevidos
 }
 
 int data_get_cod_estacao(DATA *d){
-    if(d != NULL) return d->cod_estacao; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->cod_estacao; // Retornando o campo caso o ponteiro não seja inválido
 
     return -1; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 int data_get_cod_linha(DATA *d){
-    if(d != NULL) return d->cod_linha; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->cod_linha; // Retornando o campo caso o ponteiro não seja inválido
 
     return -1; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 int data_get_cod_prox_estacao(DATA *d){ 
-    if(d != NULL) return d->cod_prox_estacao; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->cod_prox_estacao; // Retornando o campo caso o ponteiro não seja inválido
 
     return -1; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 int data_get_dist_prox_estacao(DATA *d){
-    if(d != NULL) return d->dist_prox_estacao; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->dist_prox_estacao; // Retornando o campo caso o ponteiro não seja inválido
 
     return -1; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 int data_get_cod_linha_integra(DATA *d){
-    if(d != NULL) return d->cod_linha_integra; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->cod_linha_integra; // Retornando o campo caso o ponteiro não seja inválido
 
     return -1; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 int data_get_cod_est_integra(DATA *d){
-    if(d != NULL) return d->cod_est_integra; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->cod_est_integra; // Retornando o campo caso o ponteiro não seja inválido
 
     return -1; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 uint data_get_tam_nome_estacao(DATA *d){
-    if(d != NULL) return d->tam_nome_estacao; // Se o ponteiro não for inválido, retornamos o campo
+    if(d != NULL) return d->tam_nome_estacao; // Retornando o campo caso o ponteiro não seja inválido
 
     return 0; // Se o ponteiro é inválido, tratamos o campo como nulo
 }
 
 char* data_get_nome_estacao(DATA *d){
     if(d != NULL){
-        // É basicamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
+        // É praticamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_estacao+1)); // Alocando memória para uma segunda string
         if(aux == NULL) return NULL;
 
@@ -422,7 +422,7 @@ uint data_get_tam_nome_linha(DATA *d){
 
 char* data_get_nome_linha(DATA *d){
     if(d != NULL){
-        // É basicamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
+        // É praticamente impossível o usuário ter a string do nome, mas não ter o tamanho correto da string na struct
         char *aux = (char*)malloc(sizeof(char)*(d->tam_nome_linha+1)); // Alocando memória para uma segunda string
         if(aux == NULL) return NULL;
 
@@ -446,7 +446,7 @@ char* data_get_nome_linha(DATA *d){
 /*==============SETTERS============*/
 
 bool data_set_removido(DATA *d, char removido){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível, atribuímos
     if(d != NULL && (removido == '0' || removido == '1')){
         d->removido = removido;
         return true;
@@ -456,7 +456,7 @@ bool data_set_removido(DATA *d, char removido){
 }
 
 bool data_set_proximo(DATA *d, int proximo){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("proximo" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && proximo >= -1){
         d->proximo = proximo;
         return true;
@@ -466,7 +466,7 @@ bool data_set_proximo(DATA *d, int proximo){
 }
 
 bool data_set_cod_estacao(DATA *d, int cod_estacao){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("cod_estacao" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && cod_estacao >= -1){
         d->cod_estacao = cod_estacao;
         return true;
@@ -476,7 +476,7 @@ bool data_set_cod_estacao(DATA *d, int cod_estacao){
 }
 
 bool data_set_cod_linha(DATA *d, int cod_linha){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("cod_linha" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && cod_linha >= -1){
         d->cod_linha = cod_linha;
         return true;
@@ -486,7 +486,7 @@ bool data_set_cod_linha(DATA *d, int cod_linha){
 }
 
 bool data_set_cod_prox_estacao(DATA *d, int cod_prox_estacao){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("cod_prox_estacao" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && cod_prox_estacao >= -1){
         d->cod_prox_estacao = cod_prox_estacao;
         return true;
@@ -496,7 +496,7 @@ bool data_set_cod_prox_estacao(DATA *d, int cod_prox_estacao){
 }
 
 bool data_set_dist_prox_estacao(DATA *d, int dist_prox_estacao){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("dist_prox_estacao" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && dist_prox_estacao >= -1){
         d->dist_prox_estacao = dist_prox_estacao;
         return true;
@@ -506,7 +506,7 @@ bool data_set_dist_prox_estacao(DATA *d, int dist_prox_estacao){
 }
 
 bool data_set_cod_linha_integra(DATA *d, int cod_linha_integra){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("cod_linha_integra" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && cod_linha_integra >= -1){
         d->cod_linha_integra = cod_linha_integra;
         return true;
@@ -516,7 +516,7 @@ bool data_set_cod_linha_integra(DATA *d, int cod_linha_integra){
 }
 
 bool data_set_cod_est_integra(DATA *d, int cod_est_integra){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível ("cod_est_integra" pode receber -1 caso este campo esteja marcado como nulo), atribuímos
     if(d != NULL && cod_est_integra >= -1){
         d->cod_est_integra = cod_est_integra;
         return true;
@@ -529,14 +529,15 @@ bool data_set_cod_est_integra(DATA *d, int cod_est_integra){
 // Não faz sentido haver um set separado para tamanho dos nomes, pois isso daria liberdade para o usuário modificar o tamanho para um valor errado, o que prejudicaria todo sistema.
 
 bool data_set_nome_estacao(DATA *d, char *nome_estacao){
-    if(d != NULL){ // Verificando se o ponteiro não é inválidp
+    if(d != NULL){ // Verificando se o ponteiro não é inválido
         
         // Sobrescrevendo se necessário
         if(d->nome_estacao != NULL){
             free(d->nome_estacao);
+            d->nome_estacao = NULL;
         }
         
-        // Setando o tamanho do nome da estação
+        // Reatribuindo o tamanho do nome da estação
         if(nome_estacao != NULL) d->tam_nome_estacao = strlen(nome_estacao); // Consideramos que a string passada possui o terminador \0
         else d->tam_nome_estacao = 0; // Em caso de campo nulo
 
@@ -548,8 +549,7 @@ bool data_set_nome_estacao(DATA *d, char *nome_estacao){
                 d->nome_estacao[i] = nome_estacao[i];
             }
         }
-        
-        else d->nome_estacao = NULL; // Setando o campo para nulo
+        else d->nome_estacao = NULL; // Reatribuindo o campo para nulo
         
         return true;
     }
@@ -566,7 +566,7 @@ bool data_set_nome_linha(DATA *d, char *nome_linha){
             d->nome_linha = NULL;
         }
         
-        // Setando o tamanho do nome da linha
+        // Reatribuindo o tamanho do nome da linha
         if(nome_linha != NULL) d->tam_nome_linha = strlen(nome_linha); // Consideramos que a string passada possui o terminador \0
         else d->tam_nome_linha = 0; // Em caso de campo nulo
 
@@ -578,6 +578,7 @@ bool data_set_nome_linha(DATA *d, char *nome_linha){
                 d->nome_linha[i] = nome_linha[i];
             }
         }
+        else d->nome_linha = NULL; //Reatribuindo o campo para nulo
 
         return true;
     }
