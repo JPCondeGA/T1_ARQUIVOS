@@ -11,8 +11,9 @@
     typedef char int8;
     typedef struct arvore_ ARVORE;
 
-    /* Para evitar a criação de outro TAD AVL, utilizamos um nó com dupla chave. As funções irão acessar uma ou outra chave, a depender do parâmetro tipo cujo valor true significa ordenação pelo campo par (e false, pelo o nome). */
-
+    /* Para evitar a criação de outro TAD AVL, utilizamos um nó com dupla chave. As funções irão acessar uma ou outra chave, a depender de uma parâmetro booleana.
+      Valor logicamente verdadeiro sinaliza ordenação por pares, enquanto um valor falso sinaliza ordenação por nomes. */
+    
     /* O par de inteiros não depende da ordem. */
 
     /* Para ordenação de uma AVL de pares foi usado o seguinte método: consideramos o campo maior como mais relevante; desse modo se n1.maior > n2.maior (n1 e n2 são nós), temos certeza que n1 está a direita de n2. Em caso de n1.maior == n2.maior, olhamos o campo menor. */
@@ -20,7 +21,7 @@
     /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
     /* Realiza alocação dinâmica para a estrutura que servirá de árvore AVL
-    - Recebe um booleando tipo que indica o tipo da árvore: ordenado pelos pares ou ordenada pelos nomes. No primeiro caso, tipo deve ser igual a true; no segundo, false.
+    - Recebe um booleano tipo que indica o tipo da árvore: ordenado pelos pares ou ordenada pelos nomes. No primeiro caso, tipo deve ser igual a true; no segundo, false.
     - Retorna o ponteiro para o espaço alocado, ou NULL no caso de falha.
     
     O tipo da árvore determinará como serão feitas as buscas também. Portanto, não é possível remover nó pelo nome em uma árvore ordenada por pares. */
@@ -33,22 +34,24 @@
 
     /*=============INSERÇÃO============*/
 
-    /* Insere um nome e um par de inteiros na árvore. Caso a mesma chave já tenha sido inserida previamente, sua frequência é incrementada ao invés de armazenar a mesma informação várias vezes.
+    /* Insere um nome e um par de inteiros na árvore. Caso a mesma chave já tenha sido inserida previamente, sua frequência é incrementada ao invés de armazenar a mesma informação múltiplas vezes.
     - Recebe um ponteiro para a árvore em que a chave será salva, o nome que será salvo e os inteiros que formarão o par.
+    - O campo nome será irrelevante caso a árvore passada seja uma árvore de pares, e vice-versa.
     - Retorna "true" se a inserção ocorreu corretamente ou "false" caso contrário.
     
     
-    Note que a função retornará "true" caso um nó com o mesmo nome foi encontrado na árvore. Não houve inserção, apenas atualização de frequência, mas sem falhas
+    Note que a função retornará "true" caso um nó com a mesma chave foi encontrado na árvore. Não houve inserção, apenas atualização de frequência, mas sem falhas.
     Importante ressaltar que a função copia o nome para outro espaço de memória, mantendo o conceito de TAD. */
     bool avl_inserir(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao);
 
     /*=============REMOÇÃO============*/
 
-    /* Remove um nó da árvore. Caso sua frequência seja maior que 1, o nó não é removido de fato, mas sua frequência é decrementada. Caso contrário, ele é apagado.
-    - Recebe um ponteiro para a árvore em que o nó será removidp, o nome e o par que deve ser procurado a depender do tipo da árvore.
+    /* Remove um nó da árvore. Caso sua frequência seja maior que 1, o nó não é removido da árvore, mas sua frequência é decrementada. Caso contrário, ele é apagado.
+    - Recebe um ponteiro para a árvore em que o nó será removido, o nome e o par que deve ser procurado a depender do tipo da árvore.
+    - O campo nome será irrelevante caso a árvore passada seja uma árvore de pares, e vice-versa.
     - Retorna "true" se um nó foi removido, e "false" caso contrário.
     
-    Note que a função retornará "true" se um nó foi encontrado, mas sua frequência era maior que 1. Não houve remoção, apenas atualização de frequência. */
+    Note que a função retornará "true" caso um nó com a mesma chave foi encontrado na árvore. Não houve remoção, apenas atualização de frequência, mas sem falhas. */
     bool avl_remover(ARVORE* ar, char* nome, int cod_estacao, int cod_prox_estacao);
 
     /*=============GETTER============*/
