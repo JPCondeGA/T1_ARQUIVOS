@@ -260,20 +260,20 @@ bool cntx_inicializar(HEADER** h, DATA** d){
 }
 
 
-bool cntx_checa_consistencia(HEADER *h, bool carrega, FILE *f){
+bool cntx_checa_consistencia(HEADER *h, bool carrega, bool move, FILE *f){
     if(h == NULL) return false; // Retorna-se false para não entrar em nenhum possível if que acesse esses ponteiro
     if(carrega && f == NULL) return false;  // Se a opção de carregar estiver ativa, é necessário o arquivo estar aberto e correto
 
-    if(carrega) header_carregar_campo(h, STATUS, f); 
+    if(carrega) header_carregar_campo(h, STATUS, move, f); 
 
     return header_get_status(h) == CONSISTENTE; // '1' = consistente; '0' = inconsistente
 }
 
-void cntx_altera_consistencia(HEADER *h, bool valor, FILE *f){
+void cntx_altera_consistencia(HEADER *h, bool valor, bool move, FILE *f){
     if(h == NULL || f == NULL) return; // Verificando ponteiros
 
     header_set_status(h, valor); // Arquivo foi aberto para escrita e seu status deve ser atualizado.
-    header_salvar_campo(h, STATUS, f); // Salva a mudança no registro de cabeçalho.
+    header_salvar_campo(h, STATUS,  move, f); // Salva a mudança no registro de cabeçalho.
 }
 
 bool cntx_atribuir_valor_data(char *valor, char *campo, DATA *d){

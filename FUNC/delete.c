@@ -27,18 +27,17 @@ void func_delete_interface(){
   ar_nomes = avl_criar_arvore(false);
   ar_pares = avl_criar_arvore(true);
   if(filtro == NULL || ar_nomes == NULL || ar_pares == NULL) ok = false;
-
   ok = ok && cntx_inicializar(&h, &d);
   
   // Verificando consistência
   if(f != NULL && h != NULL){ // É possível verificar a consistência do arquivo
-    header_carregar(h, f);
-    ok = ok && cntx_checa_consistencia(h, false, NULL); // O campo status já está na estrutura
+    header_carregar(h, false, f); // Já estamos no primeiro byte
+    ok = ok && cntx_checa_consistencia(h, false, false, NULL); // O campo status já está na estrutura (como não precisa carregar, o move não importa)
   }
 
   //Inicialização da funcionalidade finalizada!
   if(ok){ // Checando consistência
-    cntx_altera_consistencia(h, INCONSISTENTE, f); // Mudando o status do arquivo para inconsistente
+    cntx_altera_consistencia(h, INCONSISTENTE, true, f); // Mudando o status do arquivo para inconsistente (o cursor deve ser movido)
     
     FLAG_FIELD flags; //Marca quais campos possuem filtros ativos. 
     uint n; //Guarda a quantidade de remoções a serem feitas.
@@ -67,7 +66,7 @@ void func_delete_interface(){
     header_set_status(h, CONSISTENTE); // Atualiza o status do arquivo, agora que foi regularizado novamente
 
     //Salvando o cabeçalho
-    header_salvar(h, f);
+    header_salvar(h, true, f); // O cursor deve ser movido
   }
 
   if(f != NULL) fclose(f), f = NULL; // Salva o arquivo
@@ -93,7 +92,9 @@ void func_delete(FLAG_FIELD flags, DATA *d, DATA *filtro, HEADER *h, ARVORE* ar_
   char* nome_estacao; // Variável auxiliar para receber data_get_nome_est()
 
   for(uint RRN = 0; RRN < proxRRN; RRN++){
-        data_carregar(d, RRN, f); // Carregando o registro atual
+        // Carregando o registro atual
+        if(RRN == 0 && !primeira) data_carregar(d, RRN, true, f); // Se estamos no primeiro RRN e não na primeira, então o cursor está no final do arquivo e precisamos movê-lo 
+        else data_carregar(d, RRN , false, f);
 
         if (feof(f)) break; //Checa por END OF FILE depois de ler do arquivo.
 
@@ -105,9 +106,11 @@ void func_delete(FLAG_FIELD flags, DATA *d, DATA *filtro, HEADER *h, ARVORE* ar_
             data_set_proximo(d, header_get_topo(h)); // Salva o último valor do topo em "próximo".
             header_set_topo(h, RRN); // Empilha o registro no cabeçalho.
             
+            // Movendo ponteiro para início daquele registro
+            fseek(f, -TAM_DATA, SEEK_CUR);
+
             //Salva apenas os campos que foram alterados.
-            data_salvar_campo(d, RRN, REMOVIDO, f);
-            data_salvar_campo(d, RRN, PROXIMO, f);
+           data_salvar_removido_proximo(d, RRN, false, f); // Não precisamos mover o cursor, movemos em cima com SEEK_CUR (melhor que SEEK_SET) -> cursor vai para o próximo registro
             
             //O header é capaz de mudar mais vezes, portanto é salvo fora do laço.
 

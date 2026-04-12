@@ -2,7 +2,6 @@
 
 #define SEEK_INI 17 // Tamanho em bytes do registro de cabeçalho
 #define TAM_FIXO 33 // Tamanho em bytes do registro de dados até primeiro campo de tamanho variável
-#define TAM_DATA 80 // Tamanho em bytes de um registro de dados
 #define LIXO '$' // Caractere utilizado para indicar bytes não utilizados
 
 // Estrutura que representa um registro de dados
@@ -36,6 +35,11 @@ void data_preencher_lixo(uint RRN, uint byte_off, FILE *f);
 - Recebe o RRN do registro.
 - Retorna o byte-offset. */
 ull data_byte_offset(uint RRN);
+
+/* Calcula quantos bytes o registro representado pela estrutura ocupa no arquivo. 
+    - Recebe uma estrutura que representa um registro de dados.
+    - Retorna a quantidade bytes que esse registro representado ocuparia no arquivo binário. */
+ull data_tamanho_atual(DATA *d);
 
 /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
@@ -72,17 +76,18 @@ bool data_apagar(DATA **d){
 
 /*===========CARREGAMENTO E SALVAMENTO==========*/
 
-bool data_carregar(DATA *d, uint RRN, FILE *f){
+bool data_carregar(DATA *d, uint RRN, bool move, FILE *f){
     if(d == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
 
-    ull off = data_byte_offset(RRN); // Calculando o byte-offset do registro de dado a ser carregado
-    fseek(f, off, SEEK_SET); // Movendo cursos para o primeiro byte do registro
-    
+    // Se for necessário mover o cursor
+    ull off_ini = 0; // Byte_offset do registro
+    if(move){ // Se necessário mover
+        off_ini = data_byte_offset(RRN); // Calculando o byte-offset do registro de dado a ser carregado
+        fseek(f, off_ini, SEEK_SET); // Movendo cursos para o primeiro byte do registro
+    }
     
     fread(&(d->removido), sizeof(d->removido), 1, f); // Lendo somente o removido (1 byte) para evitar padding
-    fread(&(d->proximo), TAM_FIXO - sizeof(d->removido), 1, f); 
-
-    //fread(&(d->proximo), TAM_FIXO - sizeof(d->removido), 1, f); // Lendo até o primeiro campo de tamnanho variável (não há padding entre esses campos)
+    fread(&(d->proximo), TAM_FIXO - sizeof(d->removido), 1, f); // Lendo até o primeiro campo de tamenho variável
     
     // Alocando e lendo o nome da estação
     if(d->nome_estacao != NULL) free(d->nome_estacao); // Se necessário, o nome anterior que estava na struct será sobrescrito
@@ -105,61 +110,99 @@ bool data_carregar(DATA *d, uint RRN, FILE *f){
     }
 
     else d->nome_linha = NULL; // Para não ter acesso indevido
+    
+    if(feof(f)) return false; // Alguma(s) das leituras falhou
+        
+    fseek(f, TAM_DATA - data_tamanho_atual(d), SEEK_CUR); // Indo para o primeiro byte do próximo registro
 
     return true;
 }
 
-
-bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f){
+bool data_carregar_campo(DATA *d, uint RRN, int8 op, bool move, FILE *f){
     if(d == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
 
-    ull off_ini = data_byte_offset(RRN); // Calculando o byte-offset do registro
+    ull off_ini = 0; // Byte-offset do registro
+    uint bytes = 0; // Quantos bytes precisa para chegar no próximo registro
+    if(move) off_ini = data_byte_offset(RRN); // Calculando o byte-offset do registro
 
     // Carregando o campo selecionado
     switch(op){
         case REMOVIDO:
-            fseek(f, off_ini, SEEK_SET); // Movendo o cursor para o campo removido (primeiro)
+            if(move) fseek(f, off_ini, SEEK_SET); // Movendo para o primeiro campo, se necessário
+
             fread(d, sizeof(d->removido), 1, f); // Lendo removido
+            bytes = TAM_DATA - sizeof(d->removido);
             break;
 
         case PROXIMO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo próximo (a fórmula pode ser aplicada nos seguintes) 
+            // Movendo cursor para o campo próximo (a fórmula pode ser aplicada nos seguintes) 
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fread(&(d->proximo), sizeof(d->proximo), 1, f); 
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_ESTACAO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da estação 
+            // Movendo cursor para o campo código da estação
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+ 
             fread(&(d->cod_estacao), sizeof(d->cod_estacao), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_LINHA:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da linha
+            // Movendo cursor para o campo código da linha
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fread(&(d->cod_linha), sizeof(d->cod_linha), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_PROX_ESTACAO:
-            fseek(f,  off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da próxima estação
+            // Movendo cursor para o campo código da próxima estação
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fread(&(d->cod_prox_estacao), sizeof(d->cod_prox_estacao), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case DIST_PROX_ESTACAO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo distância para próxima estação
+            // Movendo cursor para o campo distância para próxima estação
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fread(&(d->dist_prox_estacao), sizeof(d->dist_prox_estacao), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_LINHA_INTEGRA:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da linha de integração
+            // Movendo cursor para o campo código da linha de integração
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fread(&(d->cod_linha_integra), sizeof(d->cod_linha_integra), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
         
         case COD_EST_INTEGRA:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da estação de integração
+            // Movendo cursor para o campo código da estação de integração
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fread(&(d->cod_est_integra), sizeof(d->cod_est_integra), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case NOME_ESTACAO:
             // Lendo tamanho string
-            fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET); // Movendo cursor para o tamanho do nome da estação
+            
+            // Movendo cursor para o tamanho do nome da estação
+            if(move) fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET);
+            else fseek(f, TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_CUR); 
             fread(&(d->tam_nome_estacao), sizeof(d->tam_nome_estacao), 1, f);
 
             if(d->nome_estacao != NULL) free(d->nome_estacao); // Sobrescrevendo, se necessário
@@ -172,6 +215,8 @@ bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             }
 
             else d->nome_estacao = NULL; // Para não ter acesso indevido
+
+            bytes = TAM_DATA - (TAM_FIXO + d->tam_nome_estacao);
             
             break;
             
@@ -179,7 +224,10 @@ bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             uint tam_nome_estacao; // Tamanho do nome da estação (se necessário) para saltá-lo na leitura
             
             // Lendo tamanho do nome da estação (precisamos dessa informação para ir para a byte correto e ler o nome da linha)
-            fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET); // Movendo cursor para o campo
+            // Movendo cursor para o campo
+            if(move) fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET);
+            else fseek(f, TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_CUR);
+
             fread(&tam_nome_estacao, sizeof(d->tam_nome_estacao), 1, f); 
 
             // Lendo tamanho do nome da linha
@@ -197,20 +245,29 @@ bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f){
 
             else d->nome_linha = NULL; // Para evitar acesso indevido
 
+            bytes = TAM_DATA - data_tamanho_atual(d); // Esse é o último campo, então é o tamanho que reservado a ele menos o tamanho que de fato possui
+
             break;
 
         default:
             return false; // Em caso se campo passado inválido
     }
+
+    if(feof(f)) return false; // Alguma(s) leitura(s) falhou
+
+    fseek(f, bytes, SEEK_CUR); // Indo para o primeiro byte do próximo registro
         
     return true;
 }
 
-bool data_salvar(DATA *d, uint RRN, FILE *f){
+bool data_salvar(DATA *d, uint RRN, bool move, FILE *f){
     if(d == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
 
-    ull off = data_byte_offset(RRN); // Calculando o byte-offset do registro
-    fseek(f, off, SEEK_SET); // Movendo cursor para o primeiro byte do registro
+    ull off_ini = 0; // Byte-offset do registro
+    if(move){ // Se necessário mover
+        off_ini = data_byte_offset(RRN); // Calculando byte-offset do registro
+        fseek(f, off_ini, SEEK_SET); // Movendo cursor para o primeiro byte do registro
+    }
 
     fwrite(&(d->removido), sizeof(d->removido), 1, f); // Escrevendo o campo removido separado (evitar padding)
    
@@ -231,58 +288,92 @@ bool data_salvar(DATA *d, uint RRN, FILE *f){
     if(d->nome_linha != NULL) fwrite(d->nome_linha, sizeof(char), d->tam_nome_linha, f); // Escrevendo nome da linha, se houver
 
     // Tamanho até o primeiro campo de tamanho variável + tamanho dos dois campos variáveis + 4 bytes do tam_nome_linha + 1
-    uint byte_registro = TAM_FIXO + sizeof(d->tam_nome_linha) + d->tam_nome_estacao + d->tam_nome_linha + 1;
-    data_preencher_lixo(RRN, byte_registro, f); // Preenchendo o restante do registro com lixo 
+    data_preencher_lixo(RRN, data_tamanho_atual(d), f); // Preenchendo o restante do registro com lixo
+    
+    // O cursor já estará no primeiro byte do próximo registro
 
     return true;
 }
 
 
-bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
+bool data_salvar_campo(DATA *d, uint RRN, int8 op, bool move, FILE *f){
     if(d == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
 
-    ull off_ini = data_byte_offset(RRN); // Calculando byte-offset do registro
+    ull off_ini = 0; // Byte-offset do registro
+    ull bytes = 0; // Quantidade de bytes a ser pulado para se chegar no próximo registro
+
+    if(move) off_ini = data_byte_offset(RRN); // Calculando byte-offset do registro
 
     // Escrevendo o campo selecionado
     switch(op){
         case REMOVIDO:
-            fseek(f, off_ini, SEEK_SET); // Movendo cursor para o campo removido (primeiro)
+            if(move) fseek(f, off_ini, SEEK_SET); // Movendo para o primeiro byte se necessário
+
             fwrite(&(d->removido), sizeof(d->removido), 1, f);
+            bytes = TAM_DATA - sizeof(d->removido);
             break;
 
         case PROXIMO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo próximo
+            // Movendo cursor para o campo próximo
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+
             fwrite(&(d->proximo), sizeof(d->proximo), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_ESTACAO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da estação
+            // Movendo cursor para o campo código estação
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+
             fwrite(&(d->cod_estacao), sizeof(d->cod_estacao), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_LINHA:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código linha
+            // Movendo cursor para o campo código linha
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+
             fwrite(&(d->cod_linha), sizeof(d->cod_linha), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_PROX_ESTACAO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da próxima estação
+            // Movendo cursor para o campo código próximo estação
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fwrite(&(d->cod_prox_estacao), sizeof(d->cod_prox_estacao), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case DIST_PROX_ESTACAO:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo distância para a próxima estação
+            // Movendo cursor para o campo distância próximo estação
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+            
             fwrite(&(d->dist_prox_estacao), sizeof(d->dist_prox_estacao), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_LINHA_INTEGRA:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da linha de integração
+            // Movendo cursor para o campo código linha integra
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+
             fwrite(&(d->cod_linha_integra), sizeof(d->cod_linha_integra), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case COD_EST_INTEGRA:
-            fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo código da estação de integração
+            // Movendo cursor para o campo código estação integra
+            if(move) fseek(f, off_ini + sizeof(d->removido) + sizeof(int)*(op-1), SEEK_SET);
+            else fseek(f, sizeof(d->removido) + sizeof(int)*(op-1), SEEK_CUR); 
+
             fwrite(&(d->cod_est_integra), sizeof(d->cod_est_integra), 1, f);
+            bytes = TAM_DATA - (sizeof(d->removido) + sizeof(int)*(op));
             break;
 
         case NOME_ESTACAO:
@@ -291,10 +382,10 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             // Inicializnado auxiliar
             DATA *aux = data_criar(); // Para não perder nenhum dado armazenado na struct d, criamos uma auxiliar que carregará os campos posteriores
             if(aux == NULL) return false; // Se a alocação falhou
-            data_carregar_campo(aux, RRN, NOME_LINHA, f); // Carregando o nome da linha e o tamanho do nome da linha
-            
+            data_carregar_campo(aux, RRN, NOME_LINHA, move, f); // Carregando o nome da linha e o tamanho do nome da linha (cursor pode não estar no primeiro byte do registro, assim passa o próprio move como parâmetro)
+
             // Escrvendo o tamanho do nome da estação e o nome da estação
-            fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET); // Movendo cursor para tamanho do nome da estação 
+            fseek(f, (- TAM_DATA) + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_CUR); // Movendo cursor para tamanho do nome da estação (estamos voltando o cursor um registro pois ele foi movido no carregar)
             fwrite(&(d->tam_nome_estacao), sizeof(d->tam_nome_estacao), 1, f); // Escrevendo novo tamanho do nome da estação (essa modificação tem que ser feita depois do data_load_field)
             if(d->nome_estacao != NULL) fwrite(d->nome_estacao, sizeof(char), d->tam_nome_estacao, f); // Escrevendo o novo nome da estação, se não for nulo
 
@@ -307,13 +398,17 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
             uint byte_registro_1 = TAM_FIXO + sizeof(d->tam_nome_linha) + d->tam_nome_estacao + d->tam_nome_linha+1; // Calculando o byte-offset (em relação ao primeiro byte-offset) em que estamos
             data_preencher_lixo(RRN, byte_registro_1, f);
 
+            // Não irá precisar mover o cursor, então não precisamos calcular o bytes
+
             break;
 
         case NOME_LINHA:
             uint tam_nome_estacao; // Tamanho do nome da estação (se necessário) para saltá-lo na leitura
             
             // Lendo o tamanho do nome da estação
-            fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET); // Movendo cursor para o campo tamanho do nome da estação
+            if(move) fseek(f, off_ini + TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_SET); // Movendo cursor para o campo tamanho do nome da estação
+            else fseek(f, TAM_FIXO - sizeof(d->tam_nome_estacao), SEEK_CUR);
+            
             fread(&tam_nome_estacao, sizeof(d->tam_nome_estacao), 1, f);
 
             fseek(f, tam_nome_estacao, SEEK_CUR); // Pulando o nome da estação
@@ -327,13 +422,31 @@ bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f){
 
             // Não é necessário "consertar" os campos posteriores, pois não há campos posteriores
 
+            // Não irá precisar mover o cursor, então não precisamos calcular o bytes
+
             break;
 
         default:
             return false; // Em caso se campo passado inválido
     }
 
+    if(bytes > 0) fseek(f, bytes, SEEK_CUR); // Movendo para o primeiro byte do próximo registro
+
     return true;    
+}
+
+bool data_salvar_removido_proximo(DATA *d, uint RRN, bool move, FILE *f){
+    if(d == NULL || f == NULL) return false; // Verifcando ponteiros
+
+    if(move) fseek(f, data_byte_offset(RRN), SEEK_SET); // Se necessário movemos o cursor para o começo do registro
+
+    // Escrevendo campos (separadamente para evitar padding)
+    fwrite(&(d->removido), sizeof(d->removido), 1, f);
+    fwrite(&(d->proximo), sizeof(d->proximo), 1, f);
+
+    fseek(f, TAM_DATA - sizeof(d->removido) - sizeof(d->proximo), SEEK_CUR); // Indo para o próximon registro
+
+    return true;
 }
 
 /*==============GETTERS=============*/
@@ -590,7 +703,7 @@ bool data_set_nome_linha(DATA *d, char *nome_linha){
 void data_preencher_lixo(uint RRN, uint byte_off, FILE *f){
     if(f == NULL) return; // Verificando se o ponteiro é inválido
 
-    ull resto = 80 - byte_off + 1; // Calculando quantos bytes devem ser preenchidos (um registro tem 80 bytes)
+    ull resto = TAM_DATA - byte_off; // Calculando quantos bytes devem ser preenchidos (um registro tem 80 bytes)
 
     char preenche[TAM_DATA]; // buffer que receberá uma sequência de caractere LIXO para depois ser escrito no arquivo (tamanho máximo)
     if(resto <= 80){ // Verificando se a alocação ocorreu corretamente
@@ -604,4 +717,8 @@ ull data_byte_offset(uint RRN){
     return SEEK_INI + RRN * TAM_DATA; // Tamanho do registro de cabeçalho + Soma dos tamanho dos registros de dados
 }
 
+ull data_tamanho_atual(DATA *d){
+    if(d == NULL) return 0;
+    return TAM_FIXO + sizeof(d->tam_nome_linha) + d->tam_nome_estacao + d->tam_nome_linha;
+}
 

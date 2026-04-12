@@ -62,12 +62,12 @@ void func_create_interface(){
     if(ok){ 
         // Manipulando cabeçalho
         header_set_status(h, '0'); // Mudando o status para inconsistente
-        header_salvar(h, fs); // Salvando o registro de cabeçalho inicial
+        header_salvar(h, false, fs); // Salvando o registro de cabeçalho inicial (o cursor já está em 0)
 
         ok = func_create(fe, fs, h, d, ar_nomes, ar_pares); 
 
         header_set_status(h, '1'); // Mudando o status do arquivo para consistente
-        header_salvar(h, fs);  // Salvando o registro de cabeçalho preenchido
+        header_salvar(h, true, fs);  // Salvando o registro de cabeçalho preenchido (o cursor não está em 0)
     }
     
     // Desalocando
@@ -115,7 +115,9 @@ bool func_create(FILE *fe, FILE *fs, HEADER *h, DATA *d, ARVORE *ar_nomes, ARVOR
         if(data_get_cod_prox_estacao(d) != -1) // Código da estação nunca vai ser nulo -> pares (x, NULO) não são contados
             ok = ok && avl_inserir(ar_pares, NULL, data_get_cod_estacao(d), data_get_cod_prox_estacao(d));
 
-        ok = ok && cntx_insert_end(d, h, fs); // Salvando dados no próximo RRN disponível (já verificamos que nenhum dos ponteiros é inválido)
+        // Salvando dados no próximo RRN disponível (já verificamos que nenhum dos ponteiros é inválido)
+        data_salvar(d, header_get_proxRRN(h), false, fs); // Salvando o que está no data na posição correspondente ao proxRRN no arquivo (já estamos com o cursor no lugar certo)
+        header_set_proxRRN(h, header_get_proxRRN(h) + 1); // Incrementando RRN
 
         func_desalocar_strs(valores); // Desalocando strings que representam os valores atuais
     }
@@ -169,15 +171,6 @@ bool func_dividir_linha(char linha[TAM_LINHA], char *dest[NMR_CAMPOS]){
     if(i == TAM_LINHA) ok = false;
 
     return ok;
-}
-
-bool cntx_insert_end(DATA *d, HEADER *h, FILE *f){
-    if(d == NULL || h == NULL || f == NULL) return false; // Verificando se os ponteiros são inválidos
-
-    data_salvar(d, header_get_proxRRN(h), f); // Salvando o que está no data na posição correspondente ao proxRRN no arquivo 
-    header_set_proxRRN(h, header_get_proxRRN(h) + 1); // Incrementando RRN
-
-    return true;
 }
 
 void func_desalocar_strs(char *str[NMR_CAMPOS]){

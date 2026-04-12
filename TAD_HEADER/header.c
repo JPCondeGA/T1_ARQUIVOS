@@ -38,29 +38,37 @@ bool header_apagar(HEADER **h){
 
 /*================LEITURA===============*/
 
-bool header_carregar(HEADER *h, FILE *f){
+bool header_carregar(HEADER *h, bool move, FILE *f){
     if(h == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
 
-    fseek(f, 0, SEEK_SET); // Movendo para o arquivo de cabeçalho
-    
+    if(move) fseek(f, 0, SEEK_SET); // Movendo para o arquivo de cabeçalho se já não estivermos nele
+
     // Carregando os campos separadamente para evitar problemas com o padding da estrutura 
     fread(&(h->status), sizeof(h->status), 1, f); // Somente o status
     fread(&(h->topo), sizeof(int)*4, 1, f); // O restante
 
+    if(feof(f)) return false;
+
+    // O cursor está no primeiro byte do primeiro registro de dados
+
     return true;
 }
 
-bool header_carregar_campo(HEADER *h, int8 op, FILE *f){
+bool header_carregar_campo(HEADER *h, int8 op, bool move, FILE *f){
     if(h == NULL || f == NULL) return false; // Verificando se os ponteiros são válidos
     
+    uint bytes; // Quantos bytes devem ser pulados para chegar no primeiro byte do próximo registro de dados
+
     // Verificando se o campo é o primeiro
     if(op == STATUS){ 
-        fseek(f, 0, SEEK_SET); // Movendo ponteiro para o registro de cabeçalho
+        if(move) fseek(f, 0, SEEK_SET); // Movendo ponteiro para o registro de cabeçalho se já não estiver lá
         fread(&(h->status), sizeof(h->status), 1, f); // Carregando um byte (status)
+        bytes = TAM_HEADER - sizeof(h->status); 
     }
     // Se não for o primeiro campo, podemos usar uma fórmula para chegar no campo
     else{ 
-        fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto
+        fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto (nesse caso, usar SEEK_SET e SEEK_CUR dá na mesma)
+        bytes = TAM_HEADER - (sizeof(h->status) + sizeof(int)*(op-1));
         // Carregando campo correto
         if(op == TOPO){
             fread(&(h->topo), sizeof(h->topo), 1, f);
@@ -77,16 +85,20 @@ bool header_carregar_campo(HEADER *h, int8 op, FILE *f){
         else return false; // Se não for um campo válido, retornamos false
     }
 
+    if(feof(f)) return false; // Se alguma leitura deu errado
+
+    if(bytes > 0) fseek(f, bytes, SEEK_CUR); // Movendo cursor para o primeiro registro de dados 
+
     return true;
 }
 
 
 /*================GRAVAÇÃO===============*/
 
-bool header_salvar(HEADER *h, FILE *f){
+bool header_salvar(HEADER *h, bool move, FILE *f){
     if(h == NULL || f == NULL) return false; // Verificando se os ponteiro são inválidos
 
-    fseek(f, 0, SEEK_SET); // Indo para início do arquivo
+    if(move) fseek(f, 0, SEEK_SET); // Indo para início do arquivo, se necessário
 
     // Escrevendo campos (campo a campo como especificado)
     fwrite(&(h->status), sizeof(h->status), 1, f); 
@@ -95,20 +107,28 @@ bool header_salvar(HEADER *h, FILE *f){
     fwrite(&(h->nmr_estacoes), sizeof(h->nmr_estacoes), 1, f); 
     fwrite(&(h->nmr_pares_estacao), sizeof(h->nmr_pares_estacao), 1, f); 
 
+    // Não é necessário mover o cursor
+
     return true;
 }
 
-bool header_salvar_campo(HEADER *h, int8 op, FILE *f){
+bool header_salvar_campo(HEADER *h, int8 op, bool move, FILE *f){
     if(h == NULL || f == NULL) return false; // Verificando se os ponteiros são inválidos
+
+    uint bytes; // Quantos bytes devem ser pulados para chegar no primeiro byte do próximo registro de dados
 
     // Verificando se é o primeiro campo
     if(op == STATUS){
-        fseek(f, 0, SEEK_SET);
+        if(move) fseek(f, 0, SEEK_SET);
         fwrite(&(h->status), sizeof(h->status), 1, f); // Escrevendo status na memória
+        
+        bytes = TAM_HEADER - sizeof(h->status);
     }
     // Se não for o primeiro campo, podemos usar uma fórmula para chegar no campo
     else{
-        fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto
+        fseek(f, sizeof(h->status) + sizeof(int)*(op-1), SEEK_SET); // Movendo cursor para o campo correto (nesse caso, usar SEEK_SET e SEEK_CUR dá na mesma)
+
+        bytes = TAM_HEADER - (sizeof(h->status) + sizeof(int)*(op-1));
         // Escrevendo campo desejado
         if(op == TOPO){
             fwrite(&(h->topo), sizeof(h->topo), 1, f);
@@ -124,6 +144,8 @@ bool header_salvar_campo(HEADER *h, int8 op, FILE *f){
         } 
         else return false; // Se o campo for inválido
     }
+
+    if(bytes > 0) fseek(f, bytes, SEEK_CUR);
 
     return true;
 }

@@ -32,13 +32,14 @@ void func_update_interface(){
   
   // Checando a consistência do arquivo
   if(f != NULL && h != NULL){ // Verificando se as condições para isso é possível
-    header_carregar_campo(h, STATUS, f); // Vamos precisar só desse campo
-    ok = ok && cntx_checa_consistencia(h, false, NULL); // Checando consistência já carregada
+    header_carregar_campo(h, STATUS, false, f); // Vamos precisar só desse campo (o cursor já está no começo)
+    ok = ok && cntx_checa_consistencia(h, false, false, NULL); // Checando consistência já carregada (não importa o move, pois não iremos carregar)
   }
 
   // Inicialização da funcionalidade finalizada!
   if(ok){
-    cntx_altera_consistencia(h, INCONSISTENTE, f);
+    // Alterando consistência do arquivo  
+    cntx_altera_consistencia(h, INCONSISTENTE, true, f); // Cursor precisa voltar
     
     FLAG_FIELD flag_filtro, flag_carimbo; // Marcam quais campos possuem filtros ativos para a busca e quais campos serão alterados.
   
@@ -71,7 +72,7 @@ void func_update_interface(){
   
   // Atualizando o cabeçalho
   header_set_status(h, CONSISTENTE); // Atualiza o status do arquivo, agora que foi regularizado novamente.
-  header_salvar_campo(h, STATUS, f); // Salva apenas os campos que haviam possibilidade de alteração.
+  header_salvar_campo(h, STATUS, true, f); // Salva apenas os campos que haviam possibilidade de alteração (precisa mover o cursor)
 
   if(f != NULL) fclose(f), f = NULL; //Fecha o arquivo e salva as alterações.
   
@@ -92,18 +93,24 @@ void func_update_interface(){
 
 bool func_update(FLAG_FIELD flag_filtro, FLAG_FIELD flag_carimbo, DATA *d, DATA *filtro, DATA *carimbo, FILE *f){
   bool ok = true; // Verifica se a execução ocorreu corretamente 
+  bool fim; // Indica se houve erro de leitura e, consequentemente, o fim do arquivo
   uint RRN = 0; // Guarda o RRN do registro atual
 
   while(ok){
-    data_carregar(d, RRN, f); // Lendo o registro atual
+    // Lendo o registro atual
+    if(RRN == 0) fim = data_carregar(d, RRN, true, f); // Somente na primeira iteração que o cursor vai estar posicionado no primeiro registro
+    else fim = data_carregar(d, RRN, false, f);
 
-    if (feof(f)) break; // Checa por END OF FILE depois de ler do arquivo.
+    if (!fim) break; // Checa por END OF FILE depois de ler do arquivo.
     
     if (data_get_removido(d) != '1'){ // Pula registros removidos
       if (cntx_where_compare(flag_filtro, d, filtro)){ // Se encontrar um registro que se encaixa no filtro, inicia a lógica de alteração.
         
         ok = cntx_copiar_data(&flag_carimbo, d, carimbo); //Copia todos os campos em "carimbo" marcados na flag em "d" 
-        if(ok) data_salvar(d, RRN, f); //Salva as alterações do registro no arquivo.
+        
+        fseek(f, -TAM_DATA, SEEK_CUR); // Voltando cursor (carregar moveu ele para o próximo registro)
+
+        if(ok) data_salvar(d, RRN, false, f); //Salva as alterações do registro no arquivo.
 
         // Não precisamos verificar o número de estações e pares, segundo as orientações dos monitores; mas se precisamos seria algo similar ao delete
         

@@ -12,7 +12,8 @@
 
     /* Para todas as funções consideramos que o registro de cabeçalho do arquivo binário siga exatamente as especifiações do Trabalho,
     isto é, possua os mesmos campos na mesma ordem, e que seja o primeiro registro do arquivo. */
-    /* Além disso, todas as funções de leitura ou escrita em um arquivo conservará o valor do cursor do arquivo no fim de sua execução. */
+    /* Para funções com parâmetro op, deve-se seguir as definições expressas abaixo. */
+    /* Além disso, todas as funções de leitura ou escrita em um arquivo colocará o cursor no primeiro byte do seguinte registro. */
     /* Por fim, é importante ressaltar que estamos trabalhando somente com arquviso binários - sem padding entre os valores. */
 
     /*=============DEFINIÇÕES============*/
@@ -27,6 +28,8 @@
     #define COD_EST_INTEGRA 7
     #define NOME_ESTACAO 8
     #define NOME_LINHA 9
+
+    #define TAM_DATA 80 // Tamanho em bytes de um registro de dados
 
     typedef struct data_ DATA;
 
@@ -52,14 +55,14 @@
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite leitura. */
-    bool data_carregar(DATA *d, uint RRN, FILE *f);
+    bool data_carregar(DATA *d, uint RRN, bool move, FILE *f);
 
     /* Carrega um único campo de um registro de dados de um arquivo para a estrutura.
     - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem, um seletor do campo e um ponteiro para o arquivo em que está o registro.
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite leitura. */
-    bool data_carregar_campo(DATA *d, uint RRN, int8 op, FILE *f);
+    bool data_carregar_campo(DATA *d, uint RRN, int8 op, bool move, FILE *f);
 
     /*================GRAVAÇÃO===============*/
 
@@ -68,14 +71,17 @@
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite gravação. */
-    bool data_salvar(DATA *d, uint RRN, FILE *f);
+    bool data_salvar(DATA *d, uint RRN, bool move, FILE *f);
 
     /* Salva um único campo da estrutura em um registro de dados de um arquivo.
     - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino, um seletor do campo e um ponteiro para o arquivo em que está o registro. 
     - Retorna true, se a escrita ocorreu corretamente; false, caso contrário.
     
     O arquivo deve estar aberto em modo que permite gravação. */
-    bool data_salvar_campo(DATA *d, uint RRN, int8 op, FILE *f);
+    bool data_salvar_campo(DATA *d, uint RRN, int8 op, bool move, FILE *f);
+
+    /**/
+    bool data_salvar_removido_proximo(DATA *d, uint RRN, bool move, FILE *f);
 
 
     /*===============GETTERS===============*/

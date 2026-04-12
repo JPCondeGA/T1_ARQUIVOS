@@ -73,10 +73,10 @@
     bool cntx_inicializar(HEADER** h, DATA** d);
 
     /**/
-    bool cntx_checa_consistencia(HEADER *h, bool carrega, FILE *f);
+    bool cntx_checa_consistencia(HEADER *h, bool carrega, bool move, FILE *f);
 
     /**/
-    void cntx_altera_consistencia(HEADER *h, bool valor, FILE *f);
+    void cntx_altera_consistencia(HEADER *h, bool valor, bool move, FILE *f);
 
     /* Atribui um valor a um campo específico da estrutura.
     - Recebe um string com o valor desejado para o campo, outra string indicando o campo e um ponteiro para estrutura que representa um registro de dados. 

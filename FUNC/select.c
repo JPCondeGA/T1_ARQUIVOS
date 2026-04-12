@@ -24,7 +24,7 @@ void func_select_interface(){
     FILE* f = fopen(nome_arq, "rb"); // Abre o arquivo no modo de leitura binário. -> não precisa mudar o status do arquivo
     if(f == NULL) ok = false; // Se houve falha na abertura do arquivo, retorna "false".
 
-    ok = ok && cntx_checa_consistencia(h, true, f); // Checando status do arquivo (se h == NULL, tem verificação interna)
+    ok = ok && cntx_checa_consistencia(h, true, false, f); // Checando status do arquivo (se h == NULL, tem verificação interna) -> cursor vai ser colocado no primeiro byte do primeiro registro de dados
     header_apagar(&h); // Não iremos precisar mais dessa estrutura
 
     if(ok){
@@ -45,12 +45,11 @@ bool func_select(DATA *d, bool *existe_registro, FILE *f){
     int aux = 0; // Ajuda a detectar campos nulos.
     char* nomes; // data_get_nome_est() e data_get_nome_lin() retornam arrays dinâmicos que precisam ser desalocados após uso.
     uint RRN = 0; // Demarca qual o próximo registro que deve ser lido.
-    
     while(ok){
-      
-      ok = data_carregar(d, RRN, f); // Mesmo se a leitura falhar (no fim do arquivo), não é retorna false
-      if (feof(f)) break; //Checa por END OF FILE depois de ler do arquivo.
-      
+
+      if(!data_carregar(d, RRN, false, f)) break; // Se a leitura falhar (no fim do arquivo), retorna false
+      // move = false, pois já estamos sobre o o byte
+
       // Imprimindo registros
       if (ok && data_get_removido(d) != '1'){ //Pula registros removidos
         cntx_imprimir_data(d); // Para todos os campos: Verifica se está marcado como -1 (para tamanho fixo) ou 0 (para tamanho variável) e imprime "NULO" se sim, ou o valor do campo se não.

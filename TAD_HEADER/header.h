@@ -6,9 +6,12 @@
     #include <stdlib.h>
 
     typedef char int8; // Entende-se como um inteiro de 8 bits
+    typedef unsigned int uint;
+
 
     /* Para todas as funções consideramos que o registro de cabeçalho do arquivo binário siga exatamente as especifiações do trabalho, isto é, possua os mesmos campos na mesma ordem, e que seja o primeiro registro do arquivo (byte-offset = 0). */
-    /* Para funções com parâmetro op, deve-se seguir as definições expressas abaixo*/
+    /* Para funções com parâmetro op, deve-se seguir as definições expressas abaixo. */
+    /* Além disso, todas as funções de leitura ou escrita em um arquivo colocará o cursor no primeiro byte do seguinte registro. */
     /* Por fim, é importante ressaltar que estamos trabalhando somente com arquviso binários - sem padding entre os valores - e, nas funções de leitura e  gravação, supomos que o modo de abertura do arquivo é o correto. */
 
 
@@ -19,6 +22,8 @@
     #define PROXRRN 2
     #define NMR_ESTACOES 3
     #define NMR_PARES_ESTACAO 4    
+
+    #define TAM_HEADER 17 // Tamanho em bytes do registro de cabeçalho
 
     #define INCONSISTENTE '0'
     #define CONSISTENTE '1'
@@ -53,28 +58,28 @@
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário. 
     
     O arquivo deve estar aberto em modo que permite leitura. */
-    bool header_carregar(HEADER *h, FILE *f); 
+    bool header_carregar(HEADER *h, bool move, FILE *f); 
     
     /* Função que carrega um único campo do registro de cabeçalho de um aquivo para a estrutura.
     - Recebe um ponteiro para a estrutura que representa o arquivo de cabeçalho, um seletor do campo e um ponteiro para o arquivo em que está o registro.
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite leitura. */
-    bool header_carregar_campo(HEADER *h, int8 op, FILE *f);
+    bool header_carregar_campo(HEADER *h, int8 op, bool move, FILE *f);
 
     /* Salva todos os campos da estrutura no registro de cabeçalho de um arquivo.
     - Recebe um ponteiro para a estrutura que representa o registro de cabeçalho e um ponteiro para o arquivo em que está o registro.
     - Retorna true, se a escrita ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite gravação. */
-    bool header_salvar(HEADER *h, FILE *f);
+    bool header_salvar(HEADER *h, bool move, FILE *f);
 
     /* Salva um único campo da estrutura no registro de cabeçalho de um arquivo.
     - Recebe um ponteiro para a estrutura que representa o registro de cabeçalho, um seletor do campo e um ponteiro para o arquivo em que está o registro.    
     - Retorna true, se a escrita ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite gravação. */
-    bool header_salvar_campo(HEADER *h, int8 op, FILE *f);
+    bool header_salvar_campo(HEADER *h, int8 op, bool move, FILE *f);
 
 
     /*===============GETTERS===============*/

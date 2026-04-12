@@ -4,12 +4,13 @@
 
 /* Checa a pilha de registros logicamente removidos e insere no próximo RRN disponível ou no topo da pilha.
   - Recebe um ponteiro para a estrutura que representa um registro de dados na qual será colocado os valores a serem inseridos, um ponteiro para estrutura que representa o registro de cabeçalho e um ponteiro para arquivo. */
-void func_insert(DATA *d, HEADER *h, FILE *f);
+void func_insert(DATA *d, HEADER *h, bool *primeira_proxRRN, FILE *f);
 
 /*=============INTERFACE============*/
 
 void func_insert_interface(){
   bool ok = true; // Verifica se a execução ocorreu corretamente
+  bool primeira_proxRRN = true; // Verifica se é a primeira inserção no proxRRN (deve começar como true)
   char nome_arq[TAM_BUFFER]; // Consideramos que o nome do arquivo não será maior que TAM_BUFFER
   uint n; // Guarda a quantidade de inserções que serão feitas.
   HEADER* h; // Estrutura que representa registro de cabeçalho
@@ -25,22 +26,22 @@ void func_insert_interface(){
   
   // Verificando se é possível checar a consistência
   if(h != NULL && f != NULL){
-    header_carregar(h, f); // Carregando cabeçalho atual do arquivo
-    ok = ok && cntx_checa_consistencia(h, false, NULL); // Checando a consistência
+    header_carregar(h, false, f); // Carregando cabeçalho atual do arquivo (não precisa mover cursor)
+    ok = ok && cntx_checa_consistencia(h, false, false, NULL); // Checando a consistência (como não será carregado, não importa o move)
   }
 
   // Se não houve erros até então 
   if(ok){
-      cntx_altera_consistencia(h, INCONSISTENTE, f); // Mudando estado atual do arquivo
+      cntx_altera_consistencia(h, INCONSISTENTE, true, f); // Mudando estado atual do arquivo (precisa voltar o cursor)
 
       // Realizando as inserções
       for(int i = 0; i < n; i++){
-         func_insert(d, h, f); // Realizando a leitura dos valores dos campos e gravamento na posição correta
+         func_insert(d, h, &primeira_proxRRN, f); // Realizando a leitura dos valores dos campos e gravamento na posição correta
       }
       
       // Atualizando cabeçalho
       header_set_status(h, CONSISTENTE); //Atualiza o status do arquivo, agora que foi regularizado novamente.
-      header_salvar(h, f); //Salva as mudanças no registro de cabeçalho.
+      header_salvar(h, true, f); //Salva as mudanças no registro de cabeçalho (o cursor precisa mover)
   }  
 
   if(f != NULL) fclose(f), f = NULL; //Fecha o arquivo.
@@ -55,21 +56,20 @@ void func_insert_interface(){
 
 /*=============PRINCIPAL============*/
 
-void func_insert(DATA *d, HEADER *h, FILE *f){
+void func_insert(DATA *d, HEADER *h, bool *primeira_proxRRN, FILE *f){
     char valor[TAM_BUFFER]; // Variável auxiliar para obter entrada do usuário.
-    uint RRN = header_get_topo(h); // Armazena o RRN em que será inserido o novo registro
+    int RRN = header_get_topo(h); // Armazena o RRN em que será inserido o novo registro
     
     // Adicionado no proxRRN
     if (RRN == -1){ // Caso não houver registros logicamente removidos para sobrescrever, usa o campo "proxRRN".
       RRN = header_get_proxRRN(h);
-      header_set_proxRRN(h, (RRN + 1)); // Atualiza o valor de proxRRN no início para não misturar com a lógica do registrp logicamente removido.
+      header_set_proxRRN(h, (RRN + 1)); // Atualiza o valor de proxRRN no início para não misturar com a lógica do registro logicamente removido.
     }
     // Adicionando no lugar de um logicamente removido
     else{
-        data_carregar_campo(d, RRN, PROXIMO, f); //Se topo == -1, carrega o registro de RRN salvo em proxRRN. Caso contrário, carrega o registro de RRN salvo em topo.
+        data_carregar_campo(d, RRN, PROXIMO, true, f); //Se topo == -1, carrega o registro de RRN salvo em proxRRN. Caso contrário, carrega o registro de RRN salvo em topo (precisamos mover o cursor)
         
         header_set_topo(h, data_get_proximo(d)); //Se o registro carregado for o do RRN salvo no topo, "desempilha" uma etapa do topo.
-
         data_set_removido(d, '0'); // O novo registro não está logicamente removido.
         data_set_proximo(d, -1);
     }
@@ -113,5 +113,16 @@ void func_insert(DATA *d, HEADER *h, FILE *f){
     
     // Poderíamos utilizar da árvore para o nome, mas os casos de teste não precisam
 
-    data_salvar(d, RRN, f); //Transfere todas as mudanças da estrutura para o arquivo.
+    bool move; // Inidica se é necesário mover o cursor para a função de gravação
+
+    if(RRN != header_get_proxRRN(h)-1){   
+      fseek(f, -TAM_DATA, SEEK_CUR); // Voltando cursor que está no primeira byte do próximo registro por causa do carregar_campo (essa linha é perigosa, mas melhora o desempenho)
+      move = false;
+    }
+    else if(*primeira_proxRRN){ // Se é primeira adição no proxRRN, o cursor precisa ir para o final do arquivo; senão, ele já está lá
+      *primeira_proxRRN = false;
+      move = true;
+    }
+
+    data_salvar(d, RRN, move, f); //Transfere todas as mudanças da estrutura para o arquivo.
 }

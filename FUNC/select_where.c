@@ -28,7 +28,7 @@ void func_select_where_interface(){
     f = fopen(nome_arq, "rb"); // Abrindo em modo leitura (não precisamsos escrver)
     if(f == NULL || filtro == NULL || d == NULL) ok = true; // Verificando alocações
 
-    ok = ok && cntx_checa_consistencia(h, true, f); // Verificando consistência do arquivo
+    ok = ok && cntx_checa_consistencia(h, true, false, f); // Verificando consistência do arquivo -> cursor vai para o primeiro byte do primeiro registro da dados
 
     if(ok){
         scanf("%d", &n);
@@ -62,12 +62,18 @@ void func_select_where_interface(){
 bool func_select_where(FLAG_FIELD flags, DATA *filtro, DATA *d, bool *existe_registro, FILE *f){
     if(filtro == NULL || f == NULL) return true;
     bool ok = true; // Verifica se a função foi executada com sucesso
+    bool fim; // Verifica se ocorreu falha na leitura
     uint RRN = 0;
 
     // Iterando pelos registros de dados
     while(ok){
-        ok = data_carregar(d, RRN, f); // Carregando registro com tal RRN
-        if(feof(f)) break; // Se o arquivo acabou
+        // Carregando registro
+        if(RRN == 0) fim = data_carregar(d, RRN, true, f); // Precisa mover o cursor para o início (só a primeira vez estará lá)
+        else fim = data_carregar(d, RRN, false, f); // Nesse caso não precisamo mover o cursor
+        // move = false, pois já estamos sobre o o byte
+
+        // Se a leitura falhar (no fim do arquivo), retorna false
+        if(!fim) break;
 
         // Conferindo se a estrutura é igual ao filtro nos campos determinados
         if(ok && cntx_where_compare(flags, d, filtro)){
