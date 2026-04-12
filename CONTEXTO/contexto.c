@@ -261,7 +261,7 @@ bool cntx_inicializar(HEADER** h, DATA** d){
 
 
 bool cntx_checa_consistencia(HEADER *h, bool carrega, FILE *f){
-    if(h == NULL) return false; // Retorna-se false para não entrar em nenhum possível if que acesse esses ponteiro
+    if(h == NULL) return false; // Retorna-se false para não entrar em nenhum possível "if" que acesse esses ponteiros
     if(carrega && f == NULL) return false;  // Se a opção de carregar estiver ativa, é necessário o arquivo estar aberto e correto
 
     if(carrega) header_carregar_campo(h, STATUS, f); 
