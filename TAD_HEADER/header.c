@@ -9,7 +9,7 @@ struct header_{
     int nmr_pares_estacao; // Número de pares (cod_estação, cod_prox_estação) diferentes no arquivo 
 }; 
 
-// 20 bytes de tamanho -> padding entre o campo status e topo
+// 20 bytes de tamanho -> há padding entre o campo status e topo
 
 /*=============ALOCAÇÃO E DESALOCAÇÃO============*/
 
@@ -18,7 +18,7 @@ HEADER *header_criar(){
     
     // Inicializando valores, se a alocação ocorreu corretamente
     if(h != NULL){
-        h->status = '1'; // O arquivo incialmente está consistente
+        h->status = '1'; // O arquivo inicialmente está consistente
         h->topo = -1; // A pilha está vazia
         h->proxRRN = h->nmr_estacoes = h->nmr_pares_estacao = 0; 
     }
@@ -29,7 +29,7 @@ HEADER *header_criar(){
 bool header_apagar(HEADER **h){
     if(h == NULL || *h == NULL) return false; // Verificando se o ponteiro é válido
 
-    // Desalocando e setando NULL
+    // Desalocando e atribuindo NULL
     free(*h);
     *h = NULL;
     
@@ -74,7 +74,7 @@ bool header_carregar_campo(HEADER *h, int8 op, FILE *f){
         else if(op == NMR_PARES_ESTACAO){
             fread(&(h->nmr_pares_estacao), sizeof(h->nmr_pares_estacao), 1, f);
         } 
-        else return false; // Se não for um campo válido, retornamos false
+        else return false; // Se não for um campo válido, retorna-se false
     }
 
     return true;
@@ -163,7 +163,7 @@ int header_get_nmr_pares_estacao(HEADER *h){
 /*===============SETTERS===============*/
 
 bool header_set_status(HEADER *h, char status){
-    // Se o ponteiro é válido e o valor do campo possível, atribuimos
+    // Se o ponteiro é válido e o valor do campo possível, atribuímos
     if(h != NULL && (status == '0' || status == '1')){ 
         h->status = status;
         return true;
@@ -173,7 +173,7 @@ bool header_set_status(HEADER *h, char status){
 }
 
 bool header_set_topo(HEADER *h, int topo){
-    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuimos
+    // Se o ponteiro é válido e o valor do campo possível (topo pode receber -1 em caso de pilha vazia), atribuímos
     if(h != NULL && topo >= -1){
         h->topo = topo;
         return true;
@@ -183,7 +183,7 @@ bool header_set_topo(HEADER *h, int topo){
 }
 
 bool header_set_proxRRN(HEADER *h, int proxRRN){
-    // Se o ponteiro é válido e o valor do campo possível, atribuimos
+    // Se o ponteiro é válido e o valor do campo possível, atribuímos
     if(h != NULL && proxRRN >= 0){
         h->proxRRN = proxRRN;
         return true;
@@ -193,7 +193,7 @@ bool header_set_proxRRN(HEADER *h, int proxRRN){
 }
 
 bool header_set_nmr_estacoes(HEADER *h, int nmr_estacoes){
-    // Se o ponteiro é válido e o valor do campo possível, atribuimos
+    // Se o ponteiro é válido e o valor do campo possível, atribuímos
     if(h != NULL && nmr_estacoes >= 0){
         h->nmr_estacoes = nmr_estacoes;
         return true;
@@ -203,7 +203,7 @@ bool header_set_nmr_estacoes(HEADER *h, int nmr_estacoes){
 }
 
 bool header_set_nmr_pares_estacao(HEADER *h, int nmr_pares_estacao){
-    // Se o ponteiro é válido e o valor do campo possível, atribuimos
+    // Se o ponteiro é válido e o valor do campo possível, atribuímos
     if(h != NULL && nmr_pares_estacao >= 0){
         h->nmr_pares_estacao = nmr_pares_estacao;
         return true;
