@@ -1,6 +1,6 @@
+// Se fosse um projeto real, apagaríamos tanto o test.c quanto o makefile da pasta. Porém, deixamos aqui para facilitar os testes para vocês=)
 // CUIDADO: PARA O TESTE FUNCIONAR, DEVE EXISTIR UM ARQUIVO CHAMADO arq.bin NA MESMA PASTA DO EXECUTÁVEL (CRIE-O SE NECESSÁRIO)
-
-#include "data.h"
+/*#include "data.h"
 
 
 int main(){
@@ -15,12 +15,7 @@ int main(){
 
     if(op == 1){
         char *nome;
-        data_carregar(d, RRN, f);
-        //data_load_field(d, RRN, REMOVIDO, f);
-        //data_load_field(d, RRN, PROX, f);
-        //data_load_field(d, RRN, COD_EST_INT, f);
-        //data_load_field(d, RRN, NOME_EST, f);
-        //data_load_field(d, RRN, NOME_LIN, f);
+        data_carregar(d, RRN, true, f);
         printf("REMOVIDO: %c\n", data_get_removido(d));
         printf("PROX: %d\n", data_get_proximo(d));
         printf("COD EST: %d\n", data_get_cod_estacao(d));
@@ -51,16 +46,11 @@ int main(){
         printf("COD EST INT: "); scanf("%d", &aux); data_set_cod_est_integra(d, aux);
         printf("NOME EST: "); scanf(" %s", nome); data_set_nome_estacao(d, nome);
         printf("NOME LIN: "); scanf(" %s", nome); data_set_nome_linha(d, nome);
-        data_salvar(d, RRN, f);
-        //data_save_field(d, RRN, REMOVIDO, f);
-        //data_save_field(d, RRN, PROX, f);
-        //data_save_field(d, RRN, DIST, f);
-        //data_save_field(d, RRN, NOME_EST, f);
-        //data_save_field(d, RRN, NOME_LIN, f);
+        data_salvar(d, RRN, true, f);
     }
     
     fclose(f); f = NULL;
 
     data_apagar(&d);
     return 0;
-}
+}*/

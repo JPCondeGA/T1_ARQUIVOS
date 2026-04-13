@@ -51,14 +51,14 @@
     /*================LEITURA===============*/
 
     /* Carrega todos os campos de um registro de dados de um arquivo para a estrutura.
-    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem e um ponteiro para o arquivo em que está o registro.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem, uma flag que indica se o cursor do arquivo deve mover e um ponteiro para o arquivo em que está o registro.
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite leitura. */
     bool data_carregar(DATA *d, uint RRN, bool move, FILE *f);
 
     /* Carrega um único campo de um registro de dados de um arquivo para a estrutura.
-    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem, um seletor do campo e um ponteiro para o arquivo em que está o registro.
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de origem, um seletor do campo, uma flag que indica se o cursor do arquivo deve mover e um ponteiro para o arquivo em que está o registro.
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite leitura. */
@@ -67,20 +67,22 @@
     /*================GRAVAÇÃO===============*/
 
     /* Salva todos os campos da estrutura em um registro de dados de um arquivo.
-    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino e um ponteiro para o arquivo. 
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino, uma flag que indica se o cursor do arquivo deve mover e um ponteiro para o arquivo. 
     - Retorna true, se a leitura ocorreu corretamente; false, caso contrário.
 
     O arquivo deve estar aberto em modo que permite gravação. */
     bool data_salvar(DATA *d, uint RRN, bool move, FILE *f);
 
     /* Salva um único campo da estrutura em um registro de dados de um arquivo.
-    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino, um seletor do campo e um ponteiro para o arquivo em que está o registro. 
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino, um seletor do campo, uma flag que indica se o cursor do arquivo deve mover e um ponteiro para o arquivo em que está o registro. 
     - Retorna true, se a escrita ocorreu corretamente; false, caso contrário.
     
     O arquivo deve estar aberto em modo que permite gravação. */
     bool data_salvar_campo(DATA *d, uint RRN, int8 op, bool move, FILE *f);
 
-    /**/
+    /* Salva os campos removido e próxmo da struct no arquivo. 
+    - Recebe um ponteiro para a estrutura que representa um registro de dados, o RRN do registro de destino, um seletor do campo, uma flag que indica se o cursor do arquivo deve mover e um ponteiro para o arquivo em que está o registro.  
+    - Retorna true, se ocorreu corretamente; false, caso contrário. */
     bool data_salvar_removido_proximo(DATA *d, uint RRN, bool move, FILE *f);
 
 

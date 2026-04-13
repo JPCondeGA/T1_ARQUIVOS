@@ -440,6 +440,8 @@ bool data_salvar_removido_proximo(DATA *d, uint RRN, bool move, FILE *f){
 
     if(move) fseek(f, data_byte_offset(RRN), SEEK_SET); // Se necessário movemos o cursor para o começo do registro
 
+    // Como esses são os primeiro campos, se já está no começo do registro, não precisa mover o cursor
+
     // Escrevendo campos (separadamente para evitar padding)
     fwrite(&(d->removido), sizeof(d->removido), 1, f);
     fwrite(&(d->proximo), sizeof(d->proximo), 1, f);
@@ -676,7 +678,6 @@ bool data_set_nome_linha(DATA *d, char *nome_linha){
         // Sobrescrevendo se necessário
         if(d->nome_linha != NULL){
             free(d->nome_linha);
-            d->nome_linha = NULL;
         }
         
         // Setando o tamanho do nome da linha
@@ -691,6 +692,8 @@ bool data_set_nome_linha(DATA *d, char *nome_linha){
                 d->nome_linha[i] = nome_linha[i];
             }
         }
+
+        else d->nome_linha = NULL; // Setando o campo para nulo
 
         return true;
     }

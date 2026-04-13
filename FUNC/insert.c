@@ -10,7 +10,7 @@ void func_insert(DATA *d, HEADER *h, bool *primeira_proxRRN, FILE *f);
 
 void func_insert_interface(){
   bool ok = true; // Verifica se a execução ocorreu corretamente
-  bool primeira_proxRRN = true; // Verifica se é a primeira inserção no proxRRN (deve começar como true)
+  bool primeira_proxRRN = true; // Verifica se é a primeira inserção no proxRRN (deve começar como true, não mude!)
   char nome_arq[TAM_BUFFER]; // Consideramos que o nome do arquivo não será maior que TAM_BUFFER
   uint n; // Guarda a quantidade de inserções que serão feitas.
   HEADER* h; // Estrutura que representa registro de cabeçalho

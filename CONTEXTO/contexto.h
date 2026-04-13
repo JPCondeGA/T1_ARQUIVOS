@@ -72,10 +72,13 @@
     - (*h) se torna ponteiro para registro de cabeçalho e (*d) para registro de dados.*/
     bool cntx_inicializar(HEADER** h, DATA** d);
 
-    /**/
+    /* Checa a consistência de um arquivo pelo status do cabeçalho.
+    - Recebe um ponteiro para a estrutura que representa o cabeçalho, uma flag que indica se é necessário carregar o campo status do arquivo, outra flag indicando se é necessário mover o cursor do arquivo para essa leitura e um ponteiro para o arquivo. 
+    - Retorna true, se está consistente; false, caso contrário. */
     bool cntx_checa_consistencia(HEADER *h, bool carrega, bool move, FILE *f);
 
-    /**/
+    /* Altera a consistência (status) de um arquivo. 
+    - Recebe um ponteiro para a estrutura que representa o cabeçalho, uma flag que indica se é necessário carregar o campo status do arquivo, outra flag indicando se é necessário mover o cursor do arquivo para essa leitura e um ponteiro para o arquivo. */
     void cntx_altera_consistencia(HEADER *h, bool valor, bool move, FILE *f);
 
     /* Atribui um valor a um campo específico da estrutura.

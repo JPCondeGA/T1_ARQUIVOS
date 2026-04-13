@@ -1,4 +1,5 @@
-#include "avl.h"
+// Se fosse um projeto real, apagaríamos tanto o test.c quanto o makefile da pasta. Porém, deixamos aqui para facilitar os testes para vocês=)
+/*#include "avl.h"
 
 int main(){
     int op1, op2, cod_estacao, cod_prox_estacao;
@@ -33,4 +34,4 @@ int main(){
 
     avl_apagar_arvore(&ar);
     return 0;
-}
+}*/
